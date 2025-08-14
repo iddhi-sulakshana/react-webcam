@@ -30,7 +30,7 @@ export default function VerificationSteps() {
         back: string;
     } | null>(null);
     const [livenessPassed, setLivenessPassed] = useState(false);
-    const [selfieImage, setSelfieImage] = useState(true);
+    const [selfieImage, setSelfieImage] = useState<string | null>(null);
 
     // API function to create a new session
     const createNewSession = async () => {

@@ -13,12 +13,14 @@ const UploadSelfieModal = ({
     onSuccess: (selfieImage: any) => void;
     sessionId: string;
 }) => {
-    const webcamRef = useRef(null);
-    const [selfieImage, setSelfieImage] = useState(null);
+    const webcamRef = useRef<Webcam>(null);
+    const [selfieImage, setSelfieImage] = useState<string | null>(null);
     const [isFaceDetected, setIsFaceDetected] = useState(false);
     const [loadingDetection, setLoadingDetection] = useState(false);
-    const [devices, setDevices] = useState([]);
-    const [selectedDeviceId, setSelectedDeviceId] = useState(null);
+    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+    const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(
+        null
+    );
 
     useEffect(() => {
         if (!isOpen) return;
@@ -53,7 +55,7 @@ const UploadSelfieModal = ({
         : undefined;
 
     const captureSelfie = async () => {
-        const imageSrc = webcamRef.current.getScreenshot();
+        const imageSrc = webcamRef.current?.getScreenshot();
         if (!imageSrc) return;
         setLoadingDetection(true);
 
