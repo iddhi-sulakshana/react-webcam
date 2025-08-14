@@ -18,8 +18,7 @@ export default function VerificationSteps() {
     const [isOpenSelfieModal, setIsOpenSelfieModal] = useState(false);
     const [isFinalReviewOpen, setIsFinalReviewOpen] = useState(false);
     const [sessionId, setSessionId] = useState<string | null>(
-        // "099435eb-ad29-43e8-8f67-3bc9c78ec159"
-        "80dad414-1669-47af-abe4-0036493a769b"
+        "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
     );
     const [sessionInputValue, setSessionInputValue] = useState<string>(
         sessionId || ""
@@ -31,7 +30,7 @@ export default function VerificationSteps() {
         back: string;
     } | null>(null);
     const [livenessPassed, setLivenessPassed] = useState(false);
-    const [selfieImage, setSelfieImage] = useState(null);
+    const [selfieImage, setSelfieImage] = useState(true);
 
     // API function to create a new session
     const createNewSession = async () => {
