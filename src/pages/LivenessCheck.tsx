@@ -100,15 +100,11 @@ const LivenessCheck = ({
     const videoConstraints = selectedDeviceId
         ? {
               deviceId: { exact: selectedDeviceId },
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-              frameRate: { ideal: 30, max: 30 },
+              frameRate: { ideal: 5, max: 5 },
           }
         : {
               facingMode: "user",
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-              frameRate: { ideal: 30, max: 30 },
+              frameRate: { ideal: 5, max: 5 },
           };
 
     useEffect(() => {
@@ -165,7 +161,10 @@ const LivenessCheck = ({
                 !cameraError
             ) {
                 try {
-                    const screenshot = webcamRef.current.getScreenshot();
+                    const screenshot = webcamRef.current.getScreenshot({
+                        height: 1080,
+                        width: 1920,
+                    });
                     if (screenshot) {
                         ws.send(JSON.stringify({ frame: screenshot }));
                     }
@@ -190,8 +189,8 @@ const LivenessCheck = ({
     );
 
     return (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 relative">
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 max-h-screen overflow-hidden">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 relative overflow-y-auto max-h-[90vh]">
                 <button
                     onClick={onClose}
                     className="absolute top-2 right-4 text-xl font-bold"

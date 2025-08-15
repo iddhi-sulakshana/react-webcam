@@ -16,7 +16,7 @@ const UploadSelfieModal = ({
 }) => {
     const webcamRef = useRef<Webcam>(null);
     const [selfieImage, setSelfieImage] = useState<string | null>(null);
-    const [isFaceDetected, setIsFaceDetected] = useState(false);
+    const [_, setIsFaceDetected] = useState(false);
     const [loadingDetection, setLoadingDetection] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
@@ -53,11 +53,19 @@ const UploadSelfieModal = ({
     }, [isOpen]);
 
     const videoConstraints = selectedDeviceId
-        ? { deviceId: { exact: selectedDeviceId } }
+        ? {
+              deviceId: { exact: selectedDeviceId },
+              frameRate: { ideal: 10, max: 10 },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+          }
         : undefined;
 
     const captureSelfie = () => {
-        const imageSrc = webcamRef.current?.getScreenshot();
+        const imageSrc = webcamRef.current?.getScreenshot({
+            height: 1080,
+            width: 1920,
+        });
         if (!imageSrc) {
             toast.error("Failed to capture image. Please try again.");
             return;
@@ -114,8 +122,8 @@ const UploadSelfieModal = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 relative">
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 max-h-screen overflow-hidden">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 relative overflow-y-auto max-h-[90vh]">
                 <button
                     onClick={onClose}
                     className="absolute top-2 right-4 text-xl font-bold"
