@@ -3,174 +3,6 @@ import { toast } from "react-toastify";
 import Webcam from "react-webcam";
 import { Camera, Upload, FileImage } from "lucide-react";
 import { getApiUrl } from "../utils/apiConfig";
-// cv as global variable
-declare global {
-    interface Window {
-        cv: any;
-    }
-}
-
-// Enhanced contour detection with more robust filtering
-const detectIdCardAdvanced = (
-    video: HTMLVideoElement,
-    canvas: HTMLCanvasElement
-) => {
-    if (!window.cv || !video || !canvas)
-        return { detected: false, confidence: 0, boundingBox: null };
-
-    const cv = window.cv;
-
-    try {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        if (canvas.width === 0 || canvas.height === 0)
-            return { detected: false, confidence: 0, boundingBox: null };
-
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        }
-
-        const src = cv.imread(canvas);
-        const gray = new cv.Mat();
-        const blurred = new cv.Mat();
-        const edges = new cv.Mat();
-        const hierarchy = new cv.Mat();
-        const contours = new cv.MatVector();
-
-        // Convert to grayscale
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-        // Apply bilateral filter to reduce noise while keeping edges sharp
-        cv.bilateralFilter(gray, blurred, 11, 17, 17);
-
-        // Adaptive threshold for better edge detection
-        const thresh = new cv.Mat();
-        cv.adaptiveThreshold(
-            blurred,
-            thresh,
-            255,
-            cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv.THRESH_BINARY,
-            11,
-            2
-        );
-
-        // Edge detection using Canny
-        cv.Canny(thresh, edges, 30, 200, 3, false);
-
-        // Morphological operations
-        const kernel = cv.getStructuringElement(
-            cv.MORPH_RECT,
-            new cv.Size(3, 3)
-        );
-        cv.morphologyEx(edges, edges, cv.MORPH_CLOSE, kernel);
-        cv.dilate(edges, edges, kernel, new cv.Point(-1, -1), 1);
-
-        // Find contours
-        cv.findContours(
-            edges,
-            contours,
-            hierarchy,
-            cv.RETR_EXTERNAL,
-            cv.CHAIN_APPROX_SIMPLE
-        );
-
-        let bestCandidate = null;
-        let maxConfidence = 0;
-
-        const imageArea = canvas.width * canvas.height;
-
-        for (let i = 0; i < contours.size(); i++) {
-            const contour = contours.get(i);
-            const area = cv.contourArea(contour);
-            const areaRatio = area / imageArea;
-
-            // Filter by area (10% to 80% of image)
-            if (areaRatio < 0.1 || areaRatio > 0.9) {
-                contour.delete();
-                continue;
-            }
-
-            // Approximate contour to polygon
-            const approx = new cv.Mat();
-            const epsilon = 0.02 * cv.arcLength(contour, true);
-            cv.approxPolyDP(contour, approx, epsilon, true);
-
-            // Get bounding rectangle
-            const rect = cv.boundingRect(contour);
-            const aspectRatio = rect.width / rect.height;
-
-            // Calculate confidence score
-            let confidence = 0;
-
-            // Aspect ratio score (ID cards: 1.4-1.8, tolerance: 1.2-2.0)
-            if (aspectRatio >= 1.2 && aspectRatio <= 2.0) {
-                const idealRatio = 1.586; // Standard ID card ratio
-                const ratioScore =
-                    1 - Math.abs(aspectRatio - idealRatio) / idealRatio;
-                confidence += ratioScore * 40; // 40% weight
-            }
-
-            // Area score (prefer moderate sizes)
-            if (areaRatio >= 0.15 && areaRatio <= 0.6) {
-                const areaScore = 1 - Math.abs(areaRatio - 0.3) / 0.3;
-                confidence += areaScore * 30; // 30% weight
-            }
-
-            // Corner count score (rectangles should have ~4 corners)
-            const cornerScore = Math.max(0, 1 - Math.abs(approx.rows - 4) / 4);
-            confidence += cornerScore * 20; // 20% weight
-
-            // Solidity score (how filled the contour is)
-            const hull = new cv.Mat();
-            cv.convexHull(contour, hull);
-            const hullArea = cv.contourArea(hull);
-            const solidity = area / hullArea;
-            if (solidity > 0.8) {
-                confidence += solidity * 10; // 10% weight
-            }
-            hull.delete();
-
-            if (confidence > maxConfidence && confidence > 60) {
-                // Minimum confidence threshold
-                maxConfidence = confidence;
-                bestCandidate = {
-                    x: rect.x,
-                    y: rect.y,
-                    width: rect.width,
-                    height: rect.height,
-                    area: area,
-                    aspectRatio: aspectRatio,
-                };
-            }
-
-            approx.delete();
-            contour.delete();
-        }
-
-        // Clean up
-        src.delete();
-        gray.delete();
-        blurred.delete();
-        thresh.delete();
-        edges.delete();
-        hierarchy.delete();
-        contours.delete();
-        kernel.delete();
-
-        return {
-            detected: maxConfidence > 60,
-            confidence: maxConfidence,
-            boundingBox: bestCandidate,
-        };
-    } catch (error) {
-        console.error("Advanced OpenCV detection error:", error);
-        return { detected: false, confidence: 0, boundingBox: null };
-    }
-};
-
 const UploadIdModal = ({
     isOpen,
     onClose,
@@ -198,7 +30,7 @@ const UploadIdModal = ({
         "capture"
     );
     const [documentType, setDocumentType] = useState<"id" | "passport">("id");
-    const [idDetected, setIdDetected] = useState<boolean>(false);
+    const [idDetected, _] = useState<boolean>(false);
 
     // Reset state when switching modes
     const switchUploadMode = (mode: "capture" | "upload") => {
@@ -416,41 +248,10 @@ const UploadIdModal = ({
         }
     };
 
-    const detectionCanvasRef = useRef(null);
-    console.log("idDetected", idDetected);
-    // ID Detection function using OpenCV
-    const detectIdCard = () => {
-        if (!webcamRef.current?.video || !detectionCanvasRef.current) {
-            return { detected: false, confidence: 0, boundingBox: null };
-        }
-
-        const video = webcamRef.current.video;
-        const canvas = detectionCanvasRef.current;
-
-        // Use basic detection if advanced fails
-        const result = detectIdCardAdvanced(video, canvas);
-        return result;
-    };
-    // Start detection interval
-    useEffect(() => {
-        console.log("isOpen", isOpen);
-        console.log("uploadMode", uploadMode);
-        if (!isOpen || uploadMode !== "capture") return;
-
-        const interval = setInterval(() => {
-            const result = detectIdCard();
-            setIdDetected(result.detected);
-        }, 100);
-
-        return () => clearInterval(interval);
-    }, [isOpen, uploadMode]);
-
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 max-h-screen overflow-hidden">
-            {/* Hidden canvas for OpenCV processing */}
-            <canvas ref={detectionCanvasRef} className="hidden" />
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 relative overflow-y-auto max-h-[90vh]">
                 <button
                     onClick={onClose}
