@@ -37,14 +37,15 @@ const LivenessCheck = ({
         const requestCameraPermission = async () => {
             try {
                 // Request camera permission explicitly
-                await navigator.mediaDevices.getUserMedia({ 
+                await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "user" },
-                    audio: false 
+                    audio: false,
                 });
-                
+
                 const getDevices = async () => {
                     try {
-                        const allDevices = await navigator.mediaDevices.enumerateDevices();
+                        const allDevices =
+                            await navigator.mediaDevices.enumerateDevices();
                         const videoDevices = allDevices.filter(
                             (device) => device.kind === "videoinput"
                         );
@@ -57,13 +58,17 @@ const LivenessCheck = ({
                         );
 
                         setSelectedDeviceId(
-                            preferred?.deviceId || videoDevices[0]?.deviceId || null
+                            preferred?.deviceId ||
+                                videoDevices[0]?.deviceId ||
+                                null
                         );
                         setCameraLoading(false);
                         setCameraError(null);
                     } catch (err) {
                         console.error("Device fetch error:", err);
-                        setCameraError("Failed to access camera devices. Please try again.");
+                        setCameraError(
+                            "Failed to access camera devices. Please try again."
+                        );
                         setCameraLoading(false);
                     }
                 };
@@ -72,7 +77,7 @@ const LivenessCheck = ({
             } catch (err: any) {
                 console.error("Camera permission error:", err);
                 let errorMessage = "Camera access denied. ";
-                
+
                 if (err.name === "NotAllowedError") {
                     errorMessage += "Please allow camera access and try again.";
                 } else if (err.name === "NotFoundError") {
@@ -80,9 +85,10 @@ const LivenessCheck = ({
                 } else if (err.name === "NotSupportedError") {
                     errorMessage += "Camera not supported on this browser.";
                 } else {
-                    errorMessage += "Please check your camera permissions and try again.";
+                    errorMessage +=
+                        "Please check your camera permissions and try again.";
                 }
-                
+
                 setCameraError(errorMessage);
                 setCameraLoading(false);
             }
@@ -92,17 +98,17 @@ const LivenessCheck = ({
     }, [isOpen, retryCount]);
 
     const videoConstraints = selectedDeviceId
-        ? { 
-            deviceId: { exact: selectedDeviceId },
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            frameRate: { ideal: 30, max: 30 }
+        ? {
+              deviceId: { exact: selectedDeviceId },
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              frameRate: { ideal: 30, max: 30 },
           }
-        : { 
-            facingMode: "user",
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            frameRate: { ideal: 30, max: 30 }
+        : {
+              facingMode: "user",
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              frameRate: { ideal: 30, max: 30 },
           };
 
     useEffect(() => {
@@ -151,7 +157,13 @@ const LivenessCheck = ({
 
     useEffect(() => {
         const interval = setInterval(() => {
-            if (webcamRef.current && ws && ws.readyState === WebSocket.OPEN && !cameraLoading && !cameraError) {
+            if (
+                webcamRef.current &&
+                ws &&
+                ws.readyState === WebSocket.OPEN &&
+                !cameraLoading &&
+                !cameraError
+            ) {
                 try {
                     const screenshot = webcamRef.current.getScreenshot();
                     if (screenshot) {
@@ -203,20 +215,28 @@ const LivenessCheck = ({
                             <div className="w-full h-80 bg-gray-100 flex items-center justify-center rounded-md">
                                 <div className="text-center">
                                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                                    <p className="text-gray-600">Loading camera...</p>
-                                    <p className="text-sm text-gray-500 mt-2">Please allow camera access when prompted</p>
+                                    <p className="text-gray-600">
+                                        Loading camera...
+                                    </p>
+                                    <p className="text-sm text-gray-500 mt-2">
+                                        Please allow camera access when prompted
+                                    </p>
                                 </div>
                             </div>
                         )}
-                        
+
                         {cameraError && (
                             <div className="w-full h-80 bg-red-50 flex items-center justify-center rounded-md p-4">
                                 <div className="text-center">
-                                    <div className="text-red-500 text-4xl mb-4">📷</div>
-                                    <p className="text-red-600 mb-4">{cameraError}</p>
+                                    <div className="text-red-500 text-4xl mb-4">
+                                        📷
+                                    </div>
+                                    <p className="text-red-600 mb-4">
+                                        {cameraError}
+                                    </p>
                                     <button
                                         onClick={() => {
-                                            setRetryCount(prev => prev + 1);
+                                            setRetryCount((prev) => prev + 1);
                                             setCameraError(null);
                                             setCameraLoading(true);
                                         }}
@@ -227,16 +247,25 @@ const LivenessCheck = ({
                                     <div className="mt-4 text-sm text-gray-600">
                                         <p>Troubleshooting tips:</p>
                                         <ul className="text-xs mt-2 space-y-1">
-                                            <li>• Check camera permissions in browser settings</li>
-                                            <li>• Ensure no other app is using the camera</li>
+                                            <li>
+                                                • Check camera permissions in
+                                                browser settings
+                                            </li>
+                                            <li>
+                                                • Ensure no other app is using
+                                                the camera
+                                            </li>
                                             <li>• Try refreshing the page</li>
-                                            <li>• Use HTTPS (required for camera access)</li>
+                                            <li>
+                                                • Use HTTPS (required for camera
+                                                access)
+                                            </li>
                                         </ul>
                                     </div>
                                 </div>
                             </div>
                         )}
-                        
+
                         {!cameraLoading && !cameraError && !showSuccess && (
                             <Webcam
                                 audio={false}
@@ -250,11 +279,13 @@ const LivenessCheck = ({
                                 }}
                                 onUserMediaError={(error) => {
                                     console.error("Webcam error:", error);
-                                    setCameraError("Failed to start camera. Please check permissions and try again.");
+                                    setCameraError(
+                                        "Failed to start camera. Please check permissions and try again."
+                                    );
                                 }}
                             />
                         )}
-                        
+
                         {showSuccess && (
                             <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center rounded-md">
                                 <div className="text-green-600 text-[6rem] animate-scale-pop">
@@ -266,9 +297,12 @@ const LivenessCheck = ({
 
                     <div className="space-y-2 text-sm">
                         <div className="mb-4">
-                            <h3 className="font-semibold mb-2">Instructions:</h3>
+                            <h3 className="font-semibold mb-2">
+                                Instructions:
+                            </h3>
                             <p className="text-gray-600 text-sm">
-                                Follow the prompts below. Complete all actions when prompted:
+                                Follow the prompts below. Complete all actions
+                                when prompted:
                             </p>
                         </div>
                         {renderStatus("Face Detected", status.face_detected)}
@@ -277,7 +311,7 @@ const LivenessCheck = ({
                         {renderStatus("Turn Right", status.turn_right)}
                         {renderStatus("Turn Up", status.turn_up)}
                         {renderStatus("Turn Down", status.turn_down)}
-                        
+
                         {cameraLoading && (
                             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                                 <p className="text-blue-700 text-sm">
@@ -285,11 +319,12 @@ const LivenessCheck = ({
                                 </p>
                             </div>
                         )}
-                        
+
                         {!cameraLoading && !cameraError && (
                             <div className="mt-4 p-3 bg-green-50 rounded-lg">
                                 <p className="text-green-700 text-sm">
-                                    Camera ready! Position your face in the frame and follow the prompts.
+                                    Camera ready! Position your face in the
+                                    frame and follow the prompts.
                                 </p>
                             </div>
                         )}

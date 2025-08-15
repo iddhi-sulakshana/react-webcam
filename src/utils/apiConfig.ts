@@ -33,7 +33,7 @@ export const API_CONFIGS: ApiConfig[] = [
     {
         name: "Production",
         baseUrl: "https://api.kycverification.live",
-        wsUrl: "ws://api.kycverification.live",
+        wsUrl: "wss://api.kycverification.live",
     },
     {
         name: "Local Development",
