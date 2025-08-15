@@ -35,10 +35,16 @@ export default function VerificationSteps() {
     );
     const [isGeneratingSession, setIsGeneratingSession] = useState(false);
 
-    const [idImage, setIdImage] = useState<{
-        front: string;
-        back: string;
-    } | null>(null);
+    const [idImage, setIdImage] = useState<
+        | {
+              front: string;
+              back: string;
+          }
+        | {
+              passport: string;
+          }
+        | null
+    >(null);
     const [livenessPassed, setLivenessPassed] = useState(false);
     const [selfieImage, setSelfieImage] = useState<string | null>(null);
 

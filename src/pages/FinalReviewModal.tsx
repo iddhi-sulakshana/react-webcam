@@ -7,7 +7,7 @@ export default function FinalReviewModal({
 }: {
     isOpen: boolean;
     onClose: () => void;
-    idImages: { front: string; back: string } | null;
+    idImages: { front: string; back: string } | { passport: string } | null;
     selfieImage: string | null;
     onSubmit: () => void;
 }) {
@@ -28,30 +28,64 @@ export default function FinalReviewModal({
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center">
-                        <p className="mb-2 font-semibold">ID Front</p>
-                        <img
-                            src={idImages?.front}
-                            alt="ID Front"
-                            className="rounded-lg shadow max-h-40 mx-auto"
-                        />
-                    </div>
-                    <div className="text-center">
-                        <p className="mb-2 font-semibold">ID Back</p>
-                        <img
-                            src={idImages?.back}
-                            alt="ID Back"
-                            className="rounded-lg shadow max-h-40 mx-auto"
-                        />
-                    </div>
-                    <div className="text-center">
-                        <p className="mb-2 font-semibold">Selfie</p>
-                        <img
-                            src={selfieImage || ""}
-                            alt="Selfie"
-                            className="rounded-full shadow max-h-40 mx-auto object-cover"
-                        />
-                    </div>
+                    {idImages && "passport" in idImages ? (
+                        // Passport layout
+                        <>
+                            <div className="text-center">
+                                <p className="mb-2 font-semibold">Passport</p>
+                                <img
+                                    src={idImages.passport}
+                                    alt="Passport"
+                                    className="rounded-lg shadow max-h-40 mx-auto"
+                                />
+                            </div>
+                            <div className="text-center">
+                                <p className="mb-2 font-semibold">Selfie</p>
+                                <img
+                                    src={selfieImage || ""}
+                                    alt="Selfie"
+                                    className="rounded-full shadow max-h-40 mx-auto object-cover"
+                                />
+                            </div>
+                            <div></div> {/* Empty div for grid spacing */}
+                        </>
+                    ) : (
+                        // ID layout
+                        <>
+                            <div className="text-center">
+                                <p className="mb-2 font-semibold">ID Front</p>
+                                <img
+                                    src={
+                                        idImages && "front" in idImages
+                                            ? idImages.front
+                                            : ""
+                                    }
+                                    alt="ID Front"
+                                    className="rounded-lg shadow max-h-40 mx-auto"
+                                />
+                            </div>
+                            <div className="text-center">
+                                <p className="mb-2 font-semibold">ID Back</p>
+                                <img
+                                    src={
+                                        idImages && "back" in idImages
+                                            ? idImages.back
+                                            : ""
+                                    }
+                                    alt="ID Back"
+                                    className="rounded-lg shadow max-h-40 mx-auto"
+                                />
+                            </div>
+                            <div className="text-center">
+                                <p className="mb-2 font-semibold">Selfie</p>
+                                <img
+                                    src={selfieImage || ""}
+                                    alt="Selfie"
+                                    className="rounded-full shadow max-h-40 mx-auto object-cover"
+                                />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <div className="mt-6 flex justify-end gap-4">

@@ -56,28 +56,42 @@ const UploadIdModal = ({
 }: {
     isOpen: boolean;
     onClose: () => void;
-    onSuccess: (idImages: { front: string; back: string }) => void;
+    onSuccess: (
+        idImages: { front: string; back: string } | { passport: string }
+    ) => void;
     sessionId: string | null;
 }) => {
     const webcamRef = useRef<Webcam>(null);
     const [frontImage, setFrontImage] = useState<string | null>(null);
     const [backImage, setBackImage] = useState<string | null>(null);
+    const [passportImage, setPassportImage] = useState<string | null>(null);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(
         null
     );
-    const [step, setStep] = useState<"front" | "back">("front");
+    const [step, setStep] = useState<"front" | "back" | "passport">("front");
     const [loadingSubmit, setLoadingSubmit] = useState(false);
     const [uploadMode, setUploadMode] = useState<"capture" | "upload">(
         "capture"
     );
+    const [documentType, setDocumentType] = useState<"id" | "passport">("id");
 
     // Reset state when switching modes
     const switchUploadMode = (mode: "capture" | "upload") => {
         setUploadMode(mode);
         setFrontImage(null);
         setBackImage(null);
-        setStep("front");
+        setPassportImage(null);
+        setStep(documentType === "passport" ? "passport" : "front");
+    };
+
+    // Reset state when switching document types
+    const switchDocumentType = (type: "id" | "passport") => {
+        setDocumentType(type);
+        setFrontImage(null);
+        setBackImage(null);
+        setPassportImage(null);
+        setStep(type === "passport" ? "passport" : "front");
     };
 
     // Reset state when modal closes
@@ -85,13 +99,16 @@ const UploadIdModal = ({
         if (!isOpen) {
             setFrontImage(null);
             setBackImage(null);
+            setPassportImage(null);
             setStep("front");
             setUploadMode("capture");
+            setDocumentType("id");
             setLoadingSubmit(false);
         }
     }, [isOpen]);
     const frontFileInputRef = useRef<HTMLInputElement>(null);
     const backFileInputRef = useRef<HTMLInputElement>(null);
+    const passportFileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!isOpen || uploadMode !== "capture") return;
@@ -125,13 +142,15 @@ const UploadIdModal = ({
         ? { deviceId: { exact: selectedDeviceId } }
         : undefined;
 
-    const captureIdPhoto = async () => {
+    const capturePhoto = async () => {
         const imageSrc = webcamRef.current?.getScreenshot();
         if (!imageSrc) return;
 
         const cropped = await cropBase64Image(imageSrc);
 
-        if (step === "front") {
+        if (documentType === "passport") {
+            setPassportImage(cropped);
+        } else if (step === "front") {
             setFrontImage(cropped);
             setStep("back");
         } else {
@@ -141,7 +160,7 @@ const UploadIdModal = ({
 
     const handleFileUpload = (
         event: React.ChangeEvent<HTMLInputElement>,
-        side: "front" | "back"
+        side: "front" | "back" | "passport"
     ) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -163,7 +182,9 @@ const UploadIdModal = ({
             const base64 = reader.result as string;
             // Use original image without cropping for file uploads
 
-            if (side === "front") {
+            if (side === "passport") {
+                setPassportImage(base64);
+            } else if (side === "front") {
                 setFrontImage(base64);
                 setStep("back");
             } else {
@@ -176,17 +197,24 @@ const UploadIdModal = ({
         event.target.value = "";
     };
 
-    const triggerFileUpload = (side: "front" | "back") => {
+    const triggerFileUpload = (side: "front" | "back" | "passport") => {
         if (side === "front") {
             frontFileInputRef.current?.click();
-        } else {
+        } else if (side === "back") {
             backFileInputRef.current?.click();
+        } else {
+            passportFileInputRef.current?.click();
         }
     };
 
-    const submitIdImages = async () => {
-        if (!frontImage || !backImage) {
-            toast.error("Both sides must be captured.");
+    const submitDocuments = async () => {
+        if (documentType === "id" && (!frontImage || !backImage)) {
+            toast.error("Both sides of ID must be captured.");
+            return;
+        }
+
+        if (documentType === "passport" && !passportImage) {
+            toast.error("Passport image must be captured.");
             return;
         }
 
@@ -199,26 +227,54 @@ const UploadIdModal = ({
         setLoadingSubmit(true);
 
         try {
-            const res = await fetch(getApiUrl("/api/v1/validate/upload-id"), {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-Session-ID": sessionId,
-                },
-                body: JSON.stringify({
-                    front_image: frontImage,
-                    back_image: backImage,
-                }),
-            });
+            let res;
+            let successData;
+
+            if (documentType === "passport") {
+                res = await fetch(
+                    getApiUrl("/api/v1/validate/upload-passport"),
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Session-ID": sessionId,
+                        },
+                        body: JSON.stringify({
+                            image: passportImage,
+                        }),
+                    }
+                );
+                successData = { passport: passportImage! };
+            } else {
+                res = await fetch(getApiUrl("/api/v1/validate/upload-id"), {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Session-ID": sessionId,
+                    },
+                    body: JSON.stringify({
+                        front_image: frontImage,
+                        back_image: backImage,
+                    }),
+                });
+                successData = { front: frontImage!, back: backImage! };
+            }
 
             const data = await res.json();
 
             if (res.ok && data.message && data.message === "Verified") {
-                toast.success("ID document submitted successfully!");
-                onSuccess({ front: frontImage, back: backImage });
+                toast.success(
+                    `${
+                        documentType === "passport" ? "Passport" : "ID"
+                    } document submitted successfully!`
+                );
+                onSuccess(successData);
             } else {
                 toast.error(
-                    data.detail || "ID document not detected. Please try again."
+                    data.detail ||
+                        `${
+                            documentType === "passport" ? "Passport" : "ID"
+                        } document not detected. Please try again.`
                 );
             }
         } catch (err) {
@@ -244,6 +300,32 @@ const UploadIdModal = ({
                 <h2 className="text-2xl font-bold mb-4 text-center">
                     KYC Document Upload
                 </h2>
+
+                {/* Document Type Toggle */}
+                <div className="flex justify-center mb-4">
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                        <button
+                            onClick={() => switchDocumentType("id")}
+                            className={`px-4 py-2 rounded-md transition-colors ${
+                                documentType === "id"
+                                    ? "bg-blue-600 text-white"
+                                    : "text-gray-600 hover:text-gray-800"
+                            }`}
+                        >
+                            ID Card
+                        </button>
+                        <button
+                            onClick={() => switchDocumentType("passport")}
+                            className={`px-4 py-2 rounded-md transition-colors ${
+                                documentType === "passport"
+                                    ? "bg-blue-600 text-white"
+                                    : "text-gray-600 hover:text-gray-800"
+                            }`}
+                        >
+                            Passport
+                        </button>
+                    </div>
+                </div>
 
                 {/* Mode Toggle */}
                 <div className="flex justify-center mb-6">
@@ -288,15 +370,32 @@ const UploadIdModal = ({
                     onChange={(e) => handleFileUpload(e, "back")}
                     className="hidden"
                 />
+                <input
+                    ref={passportFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, "passport")}
+                    className="hidden"
+                />
 
                 <div className="flex flex-col items-center">
                     <p className="mb-2 text-lg">
-                        Step {step === "front" ? "1" : "2"}:{" "}
-                        {uploadMode === "capture" ? "Capture" : "Upload"}{" "}
-                        {step === "front" ? "Front" : "Back"} of ID
+                        {documentType === "passport"
+                            ? `${
+                                  uploadMode === "capture"
+                                      ? "Capture"
+                                      : "Upload"
+                              } Passport`
+                            : `Step ${step === "front" ? "1" : "2"}: ${
+                                  uploadMode === "capture"
+                                      ? "Capture"
+                                      : "Upload"
+                              } ${step === "front" ? "Front" : "Back"} of ID`}
                     </p>
 
-                    {!frontImage || (step === "back" && !backImage) ? (
+                    {(documentType === "passport" && !passportImage) ||
+                    (documentType === "id" &&
+                        (!frontImage || (step === "back" && !backImage))) ? (
                         <>
                             {uploadMode === "capture" ? (
                                 // Camera Capture Mode
@@ -322,19 +421,29 @@ const UploadIdModal = ({
                                     </div>
 
                                     <button
-                                        onClick={captureIdPhoto}
+                                        onClick={capturePhoto}
                                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
                                     >
-                                        {`Capture ${
-                                            step === "front" ? "Front" : "Back"
-                                        }`}
+                                        {documentType === "passport"
+                                            ? "Capture Passport"
+                                            : `Capture ${
+                                                  step === "front"
+                                                      ? "Front"
+                                                      : "Back"
+                                              }`}
                                     </button>
                                 </>
                             ) : (
                                 // File Upload Mode
                                 <div className="w-full max-w-md">
                                     <div
-                                        onClick={() => triggerFileUpload(step)}
+                                        onClick={() =>
+                                            triggerFileUpload(
+                                                documentType === "passport"
+                                                    ? "passport"
+                                                    : step
+                                            )
+                                        }
                                         className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors mb-4"
                                         onDragOver={(e) => {
                                             e.preventDefault();
@@ -366,7 +475,9 @@ const UploadIdModal = ({
                                                 } as React.ChangeEvent<HTMLInputElement>;
                                                 handleFileUpload(
                                                     mockEvent,
-                                                    step
+                                                    documentType === "passport"
+                                                        ? "passport"
+                                                        : step
                                                 );
                                             }
                                         }}
@@ -375,10 +486,14 @@ const UploadIdModal = ({
                                             <FileImage className="w-12 h-12 text-gray-400 mb-4" />
                                             <p className="text-lg font-semibold text-gray-700 mb-2">
                                                 Upload{" "}
-                                                {step === "front"
-                                                    ? "Front"
-                                                    : "Back"}{" "}
-                                                ID Image
+                                                {documentType === "passport"
+                                                    ? "Passport"
+                                                    : `${
+                                                          step === "front"
+                                                              ? "Front"
+                                                              : "Back"
+                                                      } ID`}{" "}
+                                                Image
                                             </p>
                                             <p className="text-sm text-gray-500 mb-4">
                                                 Click to browse or drag and drop
@@ -390,14 +505,24 @@ const UploadIdModal = ({
                                     </div>
 
                                     <button
-                                        onClick={() => triggerFileUpload(step)}
+                                        onClick={() =>
+                                            triggerFileUpload(
+                                                documentType === "passport"
+                                                    ? "passport"
+                                                    : step
+                                            )
+                                        }
                                         className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center justify-center"
                                     >
                                         <Upload className="w-4 h-4 mr-2" />
                                         Choose{" "}
-                                        {step === "front"
-                                            ? "Front"
-                                            : "Back"}{" "}
+                                        {documentType === "passport"
+                                            ? "Passport"
+                                            : `${
+                                                  step === "front"
+                                                      ? "Front"
+                                                      : "Back"
+                                              }`}{" "}
                                         Image
                                     </button>
                                 </div>
@@ -405,84 +530,122 @@ const UploadIdModal = ({
                         </>
                     ) : (
                         <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                                <div>
-                                    <h2 className="text-center font-semibold">
-                                        Front
+                            {documentType === "passport" ? (
+                                // Passport Preview
+                                <div className="w-full max-w-md">
+                                    <h2 className="text-center font-semibold mb-4">
+                                        Passport
                                     </h2>
                                     <img
-                                        src={frontImage!}
-                                        alt="Front ID"
-                                        className="rounded-lg shadow-md max-h-60 mx-auto"
+                                        src={passportImage!}
+                                        alt="Passport"
+                                        className="rounded-lg shadow-md max-h-60 mx-auto w-full object-contain"
                                     />
                                     <button
                                         onClick={() => {
-                                            setFrontImage(null);
-                                            setStep("front");
+                                            setPassportImage(null);
+                                            setStep("passport");
                                         }}
                                         className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded shadow flex items-center justify-center"
                                     >
                                         {uploadMode === "capture" ? (
                                             <>
                                                 <Camera className="w-4 h-4 mr-2" />
-                                                Retake Front
+                                                Retake Passport
                                             </>
                                         ) : (
                                             <>
                                                 <Upload className="w-4 h-4 mr-2" />
-                                                Reupload Front
+                                                Reupload Passport
                                             </>
                                         )}
                                     </button>
                                 </div>
+                            ) : (
+                                // ID Preview
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                                    <div>
+                                        <h2 className="text-center font-semibold">
+                                            Front
+                                        </h2>
+                                        <img
+                                            src={frontImage!}
+                                            alt="Front ID"
+                                            className="rounded-lg shadow-md max-h-60 mx-auto"
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                setFrontImage(null);
+                                                setStep("front");
+                                            }}
+                                            className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded shadow flex items-center justify-center"
+                                        >
+                                            {uploadMode === "capture" ? (
+                                                <>
+                                                    <Camera className="w-4 h-4 mr-2" />
+                                                    Retake Front
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Upload className="w-4 h-4 mr-2" />
+                                                    Reupload Front
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
 
-                                <div>
-                                    <h2 className="text-center font-semibold">
-                                        Back
-                                    </h2>
-                                    {backImage ? (
-                                        <>
-                                            <img
-                                                src={backImage!}
-                                                alt="Back ID"
-                                                className="rounded-lg shadow-md max-h-60 mx-auto"
-                                            />
-                                            <button
-                                                onClick={() => {
-                                                    setBackImage(null);
-                                                    setStep("back");
-                                                }}
-                                                className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded shadow flex items-center justify-center"
-                                            >
-                                                {uploadMode === "capture" ? (
-                                                    <>
-                                                        <Camera className="w-4 h-4 mr-2" />
-                                                        Retake Back
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Upload className="w-4 h-4 mr-2" />
-                                                        Reupload Back
-                                                    </>
-                                                )}
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <p className="text-center text-gray-500 mt-4">
-                                            Not{" "}
-                                            {uploadMode === "capture"
-                                                ? "captured"
-                                                : "uploaded"}{" "}
-                                            yet
-                                        </p>
-                                    )}
+                                    <div>
+                                        <h2 className="text-center font-semibold">
+                                            Back
+                                        </h2>
+                                        {backImage ? (
+                                            <>
+                                                <img
+                                                    src={backImage!}
+                                                    alt="Back ID"
+                                                    className="rounded-lg shadow-md max-h-60 mx-auto"
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        setBackImage(null);
+                                                        setStep("back");
+                                                    }}
+                                                    className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded shadow flex items-center justify-center"
+                                                >
+                                                    {uploadMode ===
+                                                    "capture" ? (
+                                                        <>
+                                                            <Camera className="w-4 h-4 mr-2" />
+                                                            Retake Back
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Upload className="w-4 h-4 mr-2" />
+                                                            Reupload Back
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <p className="text-center text-gray-500 mt-4">
+                                                Not{" "}
+                                                {uploadMode === "capture"
+                                                    ? "captured"
+                                                    : "uploaded"}{" "}
+                                                yet
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
-                            {frontImage && backImage && (
+                            {((documentType === "passport" && passportImage) ||
+                                (documentType === "id" &&
+                                    frontImage &&
+                                    backImage)) && (
                                 <div className="flex items-center justify-center mt-6">
                                     <button
-                                        onClick={submitIdImages}
+                                        onClick={submitDocuments}
                                         disabled={loadingSubmit}
                                         className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow"
                                     >
