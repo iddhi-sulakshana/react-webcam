@@ -161,9 +161,12 @@ const LivenessCheck = ({
                 !cameraError
             ) {
                 try {
+                    if (!webcamRef.current?.video) return;
+                    const width = webcamRef.current?.video.videoWidth;
+                    const height = webcamRef.current?.video.videoHeight;
                     const screenshot = webcamRef.current.getScreenshot({
-                        height: 1080,
-                        width: 1920,
+                        height: height,
+                        width: width,
                     });
                     if (screenshot) {
                         ws.send(JSON.stringify({ frame: screenshot }));
@@ -270,7 +273,11 @@ const LivenessCheck = ({
                                 audio={false}
                                 ref={webcamRef}
                                 screenshotFormat="image/jpeg"
-                                videoConstraints={videoConstraints}
+                                videoConstraints={{
+                                    ...videoConstraints,
+                                    width: { ideal: 1920 },
+                                    height: { ideal: 1080 },
+                                }}
                                 className="rounded-md shadow w-full"
                                 onUserMedia={() => {
                                     console.log("Camera loaded successfully");

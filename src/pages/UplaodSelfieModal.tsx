@@ -56,15 +56,18 @@ const UploadSelfieModal = ({
         ? {
               deviceId: { exact: selectedDeviceId },
               frameRate: { ideal: 10, max: 10 },
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
           }
         : undefined;
 
     const captureSelfie = () => {
+        if (!webcamRef?.current?.video) return;
+        // Get webcamref width and height
+        const width = webcamRef.current?.video?.videoWidth;
+        const height = webcamRef.current?.video?.videoHeight;
+
         const imageSrc = webcamRef.current?.getScreenshot({
-            height: 1080,
-            width: 1920,
+            height: height,
+            width: width,
         });
         if (!imageSrc) {
             toast.error("Failed to capture image. Please try again.");
@@ -145,7 +148,11 @@ const UploadSelfieModal = ({
                                     ref={webcamRef}
                                     audio={false}
                                     screenshotFormat="image/jpeg"
-                                    videoConstraints={videoConstraints}
+                                    videoConstraints={{
+                                        ...videoConstraints,
+                                        width: { ideal: 1920 },
+                                        height: { ideal: 1080 },
+                                    }}
                                     className="rounded-lg w-full h-full object-cover"
                                 />
                                 <div className="absolute inset-0 flex justify-center items-center pointer-events-none">

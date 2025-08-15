@@ -142,15 +142,16 @@ const UploadIdModal = ({
         ? {
               deviceId: { exact: selectedDeviceId },
               frameRate: { ideal: 5, max: 5 },
-              width: 1920,
-              height: 1080,
           }
         : undefined;
 
     const capturePhoto = async () => {
+        if (!webcamRef.current?.video) return;
+        const width = webcamRef.current?.video.videoWidth;
+        const height = webcamRef.current?.video.videoHeight;
         const imageSrc = webcamRef.current?.getScreenshot({
-            height: 1080,
-            width: 1920,
+            height: height,
+            width: width,
         });
         if (!imageSrc) return;
 
@@ -414,7 +415,11 @@ const UploadIdModal = ({
                                             audio={false}
                                             screenshotFormat="image/jpeg"
                                             screenshotQuality={1}
-                                            videoConstraints={videoConstraints}
+                                            videoConstraints={{
+                                                ...videoConstraints,
+                                                width: { ideal: 1920 },
+                                                height: { ideal: 1080 },
+                                            }}
                                             className="rounded-lg w-full h-full object-cover"
                                         />
                                         <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
