@@ -18,6 +18,7 @@ const UploadSelfieModal = ({
     const [selfieImage, setSelfieImage] = useState<string | null>(null);
     const [isFaceDetected, setIsFaceDetected] = useState(false);
     const [loadingDetection, setLoadingDetection] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(
         null
@@ -55,9 +56,22 @@ const UploadSelfieModal = ({
         ? { deviceId: { exact: selectedDeviceId } }
         : undefined;
 
-    const captureSelfie = async () => {
+    const captureSelfie = () => {
         const imageSrc = webcamRef.current?.getScreenshot();
-        if (!imageSrc) return;
+        if (!imageSrc) {
+            toast.error("Failed to capture image. Please try again.");
+            return;
+        }
+
+        // Immediately capture and stop camera
+        setSelfieImage(imageSrc);
+        toast.success("Selfie captured! Please review and submit.");
+    };
+
+    const submitSelfie = async () => {
+        if (!selfieImage) return;
+
+        setIsSubmitting(true);
         setLoadingDetection(true);
 
         try {
@@ -69,24 +83,31 @@ const UploadSelfieModal = ({
                         "Content-Type": "application/json",
                         "X-Session-ID": sessionId,
                     },
-                    body: JSON.stringify({ image: imageSrc }),
+                    body: JSON.stringify({ image: selfieImage }),
                 }
             );
 
             const data = await res.json();
             setIsFaceDetected(data?.message === "Verified");
             if (data.message && data.message === "Verified") {
-                setSelfieImage(imageSrc);
                 toast.success("Face detected successfully!");
+                onSuccess(selfieImage);
             } else {
                 if (data.detail) toast.error(data.detail);
                 else toast.error("No face detected. Please try again.");
+                // Reset to allow retry
+                setSelfieImage(null);
+                setIsFaceDetected(false);
             }
         } catch (err) {
             console.error("Detection failed:", err);
-            toast.error("Server error.");
+            toast.error("Server error. Please try again.");
+            // Reset to allow retry
+            setSelfieImage(null);
+            setIsFaceDetected(false);
         } finally {
             setLoadingDetection(false);
+            setIsSubmitting(false);
         }
     };
 
@@ -124,9 +145,7 @@ const UploadSelfieModal = ({
                                         className={`border-4 border-dashed w-4/5 rounded-full`}
                                         style={{
                                             aspectRatio: "1 / 1",
-                                            borderColor: isFaceDetected
-                                                ? "limegreen"
-                                                : "red",
+                                            borderColor: "blue",
                                         }}
                                     ></div>
                                 </div>
@@ -134,44 +153,52 @@ const UploadSelfieModal = ({
 
                             <button
                                 onClick={captureSelfie}
-                                disabled={loadingDetection}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-lg text-lg font-semibold"
                             >
-                                {loadingDetection
-                                    ? "Checking..."
-                                    : "Capture Selfie"}
+                                📸 Capture Selfie
                             </button>
                         </>
                     ) : (
                         <>
                             <div>
-                                <h2 className="text-xl font-bold mb-4">
-                                    Your Selfie
+                                <h2 className="text-xl font-bold mb-4 text-center">
+                                    Review Your Selfie
                                 </h2>
                                 <img
                                     src={selfieImage}
                                     alt="Captured Selfie"
-                                    className="rounded-lg shadow-md max-h-60"
+                                    className="rounded-lg shadow-md max-h-60 mx-auto"
                                 />
+                                <p className="text-center text-gray-600 mt-2">
+                                    Please review your selfie. If you're
+                                    satisfied, click Submit to continue.
+                                </p>
                             </div>
-                            <div className="flex items-center justify-center mt-4 gap-4">
+                            <div className="flex items-center justify-center mt-6 gap-4">
                                 <button
                                     onClick={() => {
                                         setSelfieImage(null);
                                         setIsFaceDetected(false);
                                     }}
-                                    className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded shadow"
+                                    className="bg-gray-300 hover:bg-gray-400 text-black px-6 py-3 rounded-lg shadow-lg font-semibold"
                                 >
-                                    Retry Selfie
+                                    🔄 Retake Selfie
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        onSuccess(selfieImage);
-                                    }}
-                                    disabled={!selfieImage}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
+                                    onClick={submitSelfie}
+                                    disabled={isSubmitting || loadingDetection}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-lg font-semibold disabled:opacity-50"
                                 >
-                                    Continue
+                                    {isSubmitting || loadingDetection ? (
+                                        <span className="flex items-center gap-2">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                            {loadingDetection
+                                                ? "Processing..."
+                                                : "Submitting..."}
+                                        </span>
+                                    ) : (
+                                        "✅ Submit Selfie"
+                                    )}
                                 </button>
                             </div>
                         </>
