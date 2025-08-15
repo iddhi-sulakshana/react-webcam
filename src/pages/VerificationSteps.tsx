@@ -45,6 +45,7 @@ export default function VerificationSteps() {
           }
         | null
     >(null);
+    const [documentVerified, setDocumentVerified] = useState(false);
     const [livenessPassed, setLivenessPassed] = useState(false);
     const [selfieImage, setSelfieImage] = useState<string | null>(null);
 
@@ -78,6 +79,7 @@ export default function VerificationSteps() {
                     setSelfieImage(response.data.session_data.selfie_image);
                 }
 
+                // Handle ID images (front and back)
                 if (
                     response.data.session_data.id_front_image &&
                     response.data.session_data.id_back_image
@@ -86,6 +88,18 @@ export default function VerificationSteps() {
                         front: response.data.session_data.id_front_image,
                         back: response.data.session_data.id_back_image,
                     });
+                }
+
+                // Handle passport images
+                if (response.data.session_data.passport_image) {
+                    setIdImage({
+                        passport: response.data.session_data.passport_image,
+                    });
+                }
+
+                // Set document verification status
+                if (response.data.session_data.document_confirmed) {
+                    setDocumentVerified(true);
                 }
 
                 if (response.data.session_data.liveness_confirmed) {
@@ -390,7 +404,7 @@ export default function VerificationSteps() {
                 {/* Step 2: ID Document */}
                 <div
                     className={`flex items-center space-x-4 p-3 rounded-lg ${
-                        selfieImage && idImage
+                        selfieImage && documentVerified
                             ? "bg-green-100"
                             : selfieImage
                             ? "bg-blue-100"
@@ -426,9 +440,9 @@ export default function VerificationSteps() {
                 {/* Step 3: Liveness Check */}
                 <div
                     className={`flex items-center space-x-4 p-3 rounded-lg ${
-                        selfieImage && idImage && livenessPassed
+                        selfieImage && documentVerified && livenessPassed
                             ? "bg-green-100"
-                            : selfieImage && idImage
+                            : selfieImage && documentVerified
                             ? "bg-blue-100"
                             : "bg-gray-100"
                     }`}
@@ -441,7 +455,7 @@ export default function VerificationSteps() {
                     <button
                         className="flex-1 text-left"
                         onClick={() => {
-                            if (!selfieImage || !idImage) {
+                            if (!selfieImage || !documentVerified) {
                                 toast.error(
                                     "Please complete Steps 1 and 2 first."
                                 );
@@ -461,7 +475,9 @@ export default function VerificationSteps() {
                 {/* Continue Button */}
                 <button
                     className="w-full disabled:bg-blue-100 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                    disabled={!selfieImage || !livenessPassed || !idImage}
+                    disabled={
+                        !selfieImage || !livenessPassed || !documentVerified
+                    }
                     onClick={() => setIsFinalReviewOpen(true)}
                 >
                     Continue
@@ -487,9 +503,10 @@ export default function VerificationSteps() {
                 onClose={() => setIsOpenIdModal(false)}
                 onSuccess={(idImage) => {
                     setIdImage(idImage);
+                    setDocumentVerified(true);
                     setIsOpenIdModal(false);
                     setIsOpenLivenessCheck(true);
-                    toast.success("ID document uploaded!");
+                    toast.success("Document verified successfully!");
                 }}
                 sessionId={sessionId || ""} // Pass the session
             />
