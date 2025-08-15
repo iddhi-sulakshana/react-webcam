@@ -55,7 +55,7 @@ const UploadSelfieModal = ({
     const videoConstraints = selectedDeviceId
         ? {
               deviceId: { exact: selectedDeviceId },
-              frameRate: { ideal: 10, max: 10 },
+              frameRate: { ideal: 15, max: 30 },
           }
         : undefined;
 

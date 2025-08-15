@@ -100,11 +100,11 @@ const LivenessCheck = ({
     const videoConstraints = selectedDeviceId
         ? {
               deviceId: { exact: selectedDeviceId },
-              frameRate: { ideal: 5, max: 5 },
+              frameRate: { ideal: 15, max: 30 },
           }
         : {
               facingMode: "user",
-              frameRate: { ideal: 5, max: 5 },
+              frameRate: { ideal: 15, max: 30 },
           };
 
     useEffect(() => {
