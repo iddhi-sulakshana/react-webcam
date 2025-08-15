@@ -88,7 +88,7 @@ const detectIdCardAdvanced = (
             const areaRatio = area / imageArea;
 
             // Filter by area (10% to 80% of image)
-            if (areaRatio < 0.2 || areaRatio > 0.9) {
+            if (areaRatio < 0.1 || areaRatio > 0.9) {
                 contour.delete();
                 continue;
             }
