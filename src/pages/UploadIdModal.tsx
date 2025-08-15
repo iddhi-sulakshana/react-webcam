@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import Webcam from "react-webcam";
 import { Camera, Upload, FileImage } from "lucide-react";
+import { getApiUrl } from "../utils/apiConfig";
 
 const cropBase64Image = (base64: string): Promise<string> => {
     const img = new Image();
@@ -160,13 +161,13 @@ const UploadIdModal = ({
         const reader = new FileReader();
         reader.onload = async () => {
             const base64 = reader.result as string;
-            const cropped = await cropBase64Image(base64);
+            // Use original image without cropping for file uploads
 
             if (side === "front") {
-                setFrontImage(cropped);
+                setFrontImage(base64);
                 setStep("back");
             } else {
-                setBackImage(cropped);
+                setBackImage(base64);
             }
         };
         reader.readAsDataURL(file);
@@ -198,20 +199,17 @@ const UploadIdModal = ({
         setLoadingSubmit(true);
 
         try {
-            const res = await fetch(
-                "https://api.kycverification.live/api/v1/validate/upload-id",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Session-ID": sessionId,
-                    },
-                    body: JSON.stringify({
-                        front_image: frontImage,
-                        back_image: backImage,
-                    }),
-                }
-            );
+            const res = await fetch(getApiUrl("/api/v1/validate/upload-id"), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Session-ID": sessionId,
+                },
+                body: JSON.stringify({
+                    front_image: frontImage,
+                    back_image: backImage,
+                }),
+            });
 
             const data = await res.json();
 

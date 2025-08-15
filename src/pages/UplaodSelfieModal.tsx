@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import Webcam from "react-webcam";
+import { getApiUrl } from "../utils/apiConfig";
 
 const UploadSelfieModal = ({
     isOpen,
@@ -61,7 +62,7 @@ const UploadSelfieModal = ({
 
         try {
             const res = await fetch(
-                "https://api.kycverification.live/api/v1/validate/upload-selfie",
+                getApiUrl("/api/v1/validate/upload-selfie"),
                 {
                     method: "POST",
                     headers: {

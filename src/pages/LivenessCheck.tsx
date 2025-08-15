@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import Webcam from "react-webcam";
+import { getWsUrl } from "../utils/apiConfig";
 
 const LivenessCheck = ({
     isOpen,
@@ -59,7 +60,7 @@ const LivenessCheck = ({
         if (!isOpen || !session_id) return;
 
         const socket = new WebSocket(
-            "ws://api.kycverification.live/api/v1/websocket/liveness-check"
+            getWsUrl("/api/v1/websocket/liveness-check")
         );
         setWs(socket);
 
