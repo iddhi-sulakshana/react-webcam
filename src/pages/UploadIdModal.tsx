@@ -3,9 +3,18 @@ import { toast } from "react-toastify";
 import Webcam from "react-webcam";
 import { Camera, Upload, FileImage } from "lucide-react";
 import { getApiUrl } from "../utils/apiConfig";
+// cv as global variable
+declare global {
+    interface Window {
+        cv: any;
+    }
+}
 
 // Enhanced contour detection with more robust filtering
-const detectIdCardAdvanced = (video, canvas) => {
+const detectIdCardAdvanced = (
+    video: HTMLVideoElement,
+    canvas: HTMLCanvasElement
+) => {
     if (!window.cv || !video || !canvas)
         return { detected: false, confidence: 0, boundingBox: null };
 
@@ -19,7 +28,9 @@ const detectIdCardAdvanced = (video, canvas) => {
             return { detected: false, confidence: 0, boundingBox: null };
 
         const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        }
 
         const src = cv.imread(canvas);
         const gray = new cv.Mat();
