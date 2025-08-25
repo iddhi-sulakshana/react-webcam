@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import Webcam from "react-webcam";
 import { Camera, Upload, FileImage } from "lucide-react";
 import { getApiUrl } from "../utils/apiConfig";
+
 const UploadIdModal = ({
     isOpen,
     onClose,
@@ -20,6 +21,9 @@ const UploadIdModal = ({
     const [frontImage, setFrontImage] = useState<string | null>(null);
     const [backImage, setBackImage] = useState<string | null>(null);
     const [passportImage, setPassportImage] = useState<string | null>(null);
+    const [frontFile, setFrontFile] = useState<File | null>(null);
+    const [backFile, setBackFile] = useState<File | null>(null);
+    const [passportFile, setPassportFile] = useState<File | null>(null);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(
         null
@@ -38,6 +42,9 @@ const UploadIdModal = ({
         setFrontImage(null);
         setBackImage(null);
         setPassportImage(null);
+        setFrontFile(null);
+        setBackFile(null);
+        setPassportFile(null);
         setStep(documentType === "passport" ? "passport" : "front");
     };
 
@@ -47,6 +54,9 @@ const UploadIdModal = ({
         setFrontImage(null);
         setBackImage(null);
         setPassportImage(null);
+        setFrontFile(null);
+        setBackFile(null);
+        setPassportFile(null);
         setStep(type === "passport" ? "passport" : "front");
     };
 
@@ -56,12 +66,16 @@ const UploadIdModal = ({
             setFrontImage(null);
             setBackImage(null);
             setPassportImage(null);
+            setFrontFile(null);
+            setBackFile(null);
+            setPassportFile(null);
             setStep("front");
             setUploadMode("capture");
             setDocumentType("id");
             setLoadingSubmit(false);
         }
     }, [isOpen]);
+
     const frontFileInputRef = useRef<HTMLInputElement>(null);
     const backFileInputRef = useRef<HTMLInputElement>(null);
     const passportFileInputRef = useRef<HTMLInputElement>(null);
@@ -111,13 +125,28 @@ const UploadIdModal = ({
         });
         if (!imageSrc) return;
 
+        // Convert base64 to File object
+        const base64Data = imageSrc.split(",")[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const file = new File([byteArray], "captured.jpg", {
+            type: "image/jpeg",
+        });
+
         if (documentType === "passport") {
             setPassportImage(imageSrc);
+            setPassportFile(file);
         } else if (step === "front") {
             setFrontImage(imageSrc);
+            setFrontFile(file);
             setStep("back");
         } else {
             setBackImage(imageSrc);
+            setBackFile(file);
         }
     };
 
@@ -143,15 +172,17 @@ const UploadIdModal = ({
         const reader = new FileReader();
         reader.onload = async () => {
             const base64 = reader.result as string;
-            // Use original image without cropping for file uploads
 
             if (side === "passport") {
                 setPassportImage(base64);
+                setPassportFile(file);
             } else if (side === "front") {
                 setFrontImage(base64);
+                setFrontFile(file);
                 setStep("back");
             } else {
                 setBackImage(base64);
+                setBackFile(file);
             }
         };
         reader.readAsDataURL(file);
@@ -171,12 +202,12 @@ const UploadIdModal = ({
     };
 
     const submitDocuments = async () => {
-        if (documentType === "id" && (!frontImage || !backImage)) {
+        if (documentType === "id" && (!frontFile || !backFile)) {
             toast.error("Both sides of ID must be captured.");
             return;
         }
 
-        if (documentType === "passport" && !passportImage) {
+        if (documentType === "passport" && !passportFile) {
             toast.error("Passport image must be captured.");
             return;
         }
@@ -194,31 +225,31 @@ const UploadIdModal = ({
             let successData;
 
             if (documentType === "passport") {
+                const formData = new FormData();
+                formData.append("image", passportFile!);
+
                 res = await fetch(
                     getApiUrl("/api/v1/validate/upload-passport"),
                     {
                         method: "POST",
                         headers: {
-                            "Content-Type": "application/json",
                             "X-Session-ID": sessionId,
                         },
-                        body: JSON.stringify({
-                            image: passportImage,
-                        }),
+                        body: formData,
                     }
                 );
                 successData = { passport: passportImage! };
             } else {
+                const formData = new FormData();
+                formData.append("front_image", frontFile!);
+                formData.append("back_image", backFile!);
+
                 res = await fetch(getApiUrl("/api/v1/validate/upload-id"), {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json",
                         "X-Session-ID": sessionId,
                     },
-                    body: JSON.stringify({
-                        front_image: frontImage,
-                        back_image: backImage,
-                    }),
+                    body: formData,
                 });
                 successData = { front: frontImage!, back: backImage! };
             }
@@ -513,6 +544,7 @@ const UploadIdModal = ({
                                     <button
                                         onClick={() => {
                                             setPassportImage(null);
+                                            setPassportFile(null);
                                             setStep("passport");
                                         }}
                                         className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded shadow flex items-center justify-center"
@@ -545,6 +577,7 @@ const UploadIdModal = ({
                                         <button
                                             onClick={() => {
                                                 setFrontImage(null);
+                                                setFrontFile(null);
                                                 setStep("front");
                                             }}
                                             className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded shadow flex items-center justify-center"
@@ -577,6 +610,7 @@ const UploadIdModal = ({
                                                 <button
                                                     onClick={() => {
                                                         setBackImage(null);
+                                                        setBackFile(null);
                                                         setStep("back");
                                                     }}
                                                     className="mt-2 w-full bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded shadow flex items-center justify-center"

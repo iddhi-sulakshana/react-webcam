@@ -16,12 +16,16 @@ const UploadSelfieModal = ({
 }) => {
     const webcamRef = useRef<Webcam>(null);
     const [selfieImage, setSelfieImage] = useState<string | null>(null);
+    const [selfieFile, setSelfieFile] = useState<File | null>(null);
     const [_, setIsFaceDetected] = useState(false);
     const [loadingDetection, setLoadingDetection] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(
         null
+    );
+    const [uploadMode, setUploadMode] = useState<"capture" | "upload">(
+        "capture"
     );
 
     useEffect(() => {
@@ -74,27 +78,70 @@ const UploadSelfieModal = ({
             return;
         }
 
+        // Convert base64 to File object
+        const base64Data = imageSrc.split(",")[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const file = new File([byteArray], "selfie.jpg", {
+            type: "image/jpeg",
+        });
+
         // Immediately capture and stop camera
         setSelfieImage(imageSrc);
+        setSelfieFile(file);
         toast.success("Selfie captured! Please review and submit.");
     };
 
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith("image/")) {
+            toast.error("Please select a valid image file.");
+            return;
+        }
+
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("File size must be less than 10MB.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const base64 = reader.result as string;
+            setSelfieImage(base64);
+            setSelfieFile(file);
+        };
+        reader.readAsDataURL(file);
+
+        // Reset the input
+        event.target.value = "";
+    };
+
     const submitSelfie = async () => {
-        if (!selfieImage) return;
+        if (!selfieFile) return;
 
         setIsSubmitting(true);
         setLoadingDetection(true);
 
         try {
+            const formData = new FormData();
+            formData.append("image", selfieFile);
+
             const res = await fetch(
                 getApiUrl("/api/v1/validate/upload-selfie"),
                 {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json",
                         "X-Session-ID": sessionId,
                     },
-                    body: JSON.stringify({ image: selfieImage }),
+                    body: formData,
                 }
             );
 
@@ -108,6 +155,7 @@ const UploadSelfieModal = ({
                 else toast.error("No face detected. Please try again.");
                 // Reset to allow retry
                 setSelfieImage(null);
+                setSelfieFile(null);
                 setIsFaceDetected(false);
             }
         } catch (err) {
@@ -115,12 +163,25 @@ const UploadSelfieModal = ({
             toast.error("Server error. Please try again.");
             // Reset to allow retry
             setSelfieImage(null);
+            setSelfieFile(null);
             setIsFaceDetected(false);
         } finally {
             setLoadingDetection(false);
             setIsSubmitting(false);
         }
     };
+
+    // Reset state when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            setSelfieImage(null);
+            setSelfieFile(null);
+            setUploadMode("capture");
+            setIsFaceDetected(false);
+            setLoadingDetection(false);
+            setIsSubmitting(false);
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -138,40 +199,146 @@ const UploadSelfieModal = ({
                     KYC Selfie Capture
                 </h2>
 
+                {/* Mode Toggle */}
+                <div className="flex justify-center mb-6">
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                        <button
+                            onClick={() => setUploadMode("capture")}
+                            className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                                uploadMode === "capture"
+                                    ? "bg-blue-600 text-white"
+                                    : "text-gray-600 hover:text-gray-800"
+                            }`}
+                        >
+                            📸 Camera
+                        </button>
+                        <button
+                            onClick={() => setUploadMode("upload")}
+                            className={`flex items-center px-4 py-2 rounded-md transition-colors ${
+                                uploadMode === "upload"
+                                    ? "bg-blue-600 text-white"
+                                    : "text-gray-600 hover:text-gray-800"
+                            }`}
+                        >
+                            📁 Upload
+                        </button>
+                    </div>
+                </div>
+
                 <div className="flex flex-col items-center">
-                    <p className="mb-2">Step 2: Capture a Selfie</p>
+                    <p className="mb-2">
+                        Step 2:{" "}
+                        {uploadMode === "capture" ? "Capture" : "Upload"} a
+                        Selfie
+                    </p>
 
                     {!selfieImage ? (
                         <>
-                            <div className="relative w-full max-w-md aspect-video mb-4">
-                                <Webcam
-                                    ref={webcamRef}
-                                    audio={false}
-                                    screenshotFormat="image/jpeg"
-                                    videoConstraints={{
-                                        ...videoConstraints,
-                                        width: { ideal: 1920 },
-                                        height: { ideal: 1080 },
-                                    }}
-                                    className="rounded-lg w-full h-full object-cover"
-                                />
-                                <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
-                                    <div
-                                        className={`border-4 border-dashed w-4/5 rounded-full`}
-                                        style={{
-                                            aspectRatio: "1 / 1",
-                                            borderColor: "blue",
-                                        }}
-                                    ></div>
-                                </div>
-                            </div>
+                            {uploadMode === "capture" ? (
+                                <>
+                                    <div className="relative w-full max-w-md aspect-video mb-4">
+                                        <Webcam
+                                            ref={webcamRef}
+                                            audio={false}
+                                            screenshotFormat="image/jpeg"
+                                            videoConstraints={{
+                                                ...videoConstraints,
+                                                width: { ideal: 1920 },
+                                                height: { ideal: 1080 },
+                                            }}
+                                            className="rounded-lg w-full h-full object-cover"
+                                        />
+                                        <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
+                                            <div
+                                                className={`border-4 border-dashed w-4/5 rounded-full`}
+                                                style={{
+                                                    aspectRatio: "1 / 1",
+                                                    borderColor: "blue",
+                                                }}
+                                            ></div>
+                                        </div>
+                                    </div>
 
-                            <button
-                                onClick={captureSelfie}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-lg text-lg font-semibold"
-                            >
-                                📸 Capture Selfie
-                            </button>
+                                    <button
+                                        onClick={captureSelfie}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-lg text-lg font-semibold"
+                                    >
+                                        📸 Capture Selfie
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="w-full max-w-md">
+                                    <div
+                                        onClick={() =>
+                                            document
+                                                .getElementById(
+                                                    "selfie-file-input"
+                                                )
+                                                ?.click()
+                                        }
+                                        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors mb-4"
+                                        onDragOver={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.add(
+                                                "border-blue-500",
+                                                "bg-blue-50"
+                                            );
+                                        }}
+                                        onDragLeave={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.remove(
+                                                "border-blue-500",
+                                                "bg-blue-50"
+                                            );
+                                        }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.classList.remove(
+                                                "border-blue-500",
+                                                "bg-blue-50"
+                                            );
+                                            const files = e.dataTransfer.files;
+                                            if (files.length > 0) {
+                                                const mockEvent = {
+                                                    target: {
+                                                        files,
+                                                        value: "",
+                                                    },
+                                                } as React.ChangeEvent<HTMLInputElement>;
+                                                handleFileUpload(mockEvent);
+                                            }
+                                        }}
+                                    >
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-4xl mb-4">
+                                                📁
+                                            </div>
+                                            <p className="text-lg font-semibold text-gray-700 mb-2">
+                                                Upload Selfie Image
+                                            </p>
+                                            <p className="text-sm text-gray-500 mb-4">
+                                                Click to browse or drag and drop
+                                            </p>
+                                            <p className="text-xs text-gray-400">
+                                                JPG, PNG up to 10MB
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() =>
+                                            document
+                                                .getElementById(
+                                                    "selfie-file-input"
+                                                )
+                                                ?.click()
+                                        }
+                                        className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center justify-center"
+                                    >
+                                        📁 Choose Selfie Image
+                                    </button>
+                                </div>
+                            )}
                         </>
                     ) : (
                         <>
@@ -193,6 +360,7 @@ const UploadSelfieModal = ({
                                 <button
                                     onClick={() => {
                                         setSelfieImage(null);
+                                        setSelfieFile(null);
                                         setIsFaceDetected(false);
                                     }}
                                     className="bg-gray-300 hover:bg-gray-400 text-black px-6 py-3 rounded-lg shadow-lg font-semibold"
@@ -220,7 +388,16 @@ const UploadSelfieModal = ({
                     )}
                 </div>
 
-                {devices.length > 1 && (
+                {/* Hidden file input */}
+                <input
+                    id="selfie-file-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                />
+
+                {devices.length > 1 && uploadMode === "capture" && (
                     <div className="mt-4">
                         <label className="mr-2 font-semibold">
                             Select Camera:
