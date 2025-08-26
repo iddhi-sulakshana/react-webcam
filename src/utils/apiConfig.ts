@@ -82,14 +82,38 @@ export const getWsUrl = (endpoint: string): string => {
     return `${config.wsUrl}${endpoint}`;
 };
 
+// Default headers for all API requests
+const getDefaultHeaders = (): Record<string, string> => ({
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "User-Agent": "KYC-Frontend/1.0.0",
+    "X-Requested-With": "XMLHttpRequest",
+});
+
+// Enhanced fetch function with default headers
+export const apiRequest = async (
+    endpoint: string,
+    options: RequestInit = {}
+): Promise<Response> => {
+    const defaultHeaders = getDefaultHeaders();
+    const mergedHeaders = {
+        ...defaultHeaders,
+        ...options.headers,
+    };
+
+    return fetch(getApiUrl(endpoint), {
+        ...options,
+        headers: mergedHeaders,
+    });
+};
+
 // API function to get session details
 export const getSessionDetails = async (
     sessionId: string
 ): Promise<SessionDetailsResponse> => {
-    const response = await fetch(getApiUrl("/api/v1/session/session-details"), {
+    const response = await apiRequest("/api/v1/session/session-details", {
         method: "GET",
         headers: {
-            accept: "application/json",
             "X-Session-ID": sessionId,
         },
     });

@@ -17,7 +17,7 @@ import {
     API_CONFIGS,
     getApiConfig,
     setApiConfig,
-    getApiUrl,
+    apiRequest,
     getSessionDetails,
 } from "../utils/apiConfig";
 import type { SessionData, ApiConfig } from "../utils/apiConfig";
@@ -132,13 +132,10 @@ export default function VerificationSteps() {
     const createNewSession = async () => {
         setIsGeneratingSession(true);
         try {
-            const response = await fetch(
-                getApiUrl("/api/v1/session/create-session"),
+            const response = await apiRequest(
+                "/api/v1/session/create-session",
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
                 }
             );
 

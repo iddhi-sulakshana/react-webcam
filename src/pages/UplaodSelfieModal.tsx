@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import Webcam from "react-webcam";
-import { getApiUrl } from "../utils/apiConfig";
+import { apiRequest } from "../utils/apiConfig";
 
 const UploadSelfieModal = ({
     isOpen,
@@ -134,16 +134,13 @@ const UploadSelfieModal = ({
             const formData = new FormData();
             formData.append("image", selfieFile);
 
-            const res = await fetch(
-                getApiUrl("/api/v1/validate/upload-selfie"),
-                {
-                    method: "POST",
-                    headers: {
-                        "X-Session-ID": sessionId,
-                    },
-                    body: formData,
-                }
-            );
+            const res = await apiRequest("/api/v1/validate/upload-selfie", {
+                method: "POST",
+                headers: {
+                    "X-Session-ID": sessionId,
+                },
+                body: formData,
+            });
 
             const data = await res.json();
             setIsFaceDetected(data?.message === "Verified");

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import Webcam from "react-webcam";
 import { Camera, Upload, FileImage } from "lucide-react";
-import { getApiUrl } from "../utils/apiConfig";
+import { apiRequest } from "../utils/apiConfig";
 
 const UploadIdModal = ({
     isOpen,
@@ -228,23 +228,20 @@ const UploadIdModal = ({
                 const formData = new FormData();
                 formData.append("image", passportFile!);
 
-                res = await fetch(
-                    getApiUrl("/api/v1/validate/upload-passport"),
-                    {
-                        method: "POST",
-                        headers: {
-                            "X-Session-ID": sessionId,
-                        },
-                        body: formData,
-                    }
-                );
+                res = await apiRequest("/api/v1/validate/upload-passport", {
+                    method: "POST",
+                    headers: {
+                        "X-Session-ID": sessionId,
+                    },
+                    body: formData,
+                });
                 successData = { passport: passportImage! };
             } else {
                 const formData = new FormData();
                 formData.append("front_image", frontFile!);
                 formData.append("back_image", backFile!);
 
-                res = await fetch(getApiUrl("/api/v1/validate/upload-id"), {
+                res = await apiRequest("/api/v1/validate/upload-id", {
                     method: "POST",
                     headers: {
                         "X-Session-ID": sessionId,
