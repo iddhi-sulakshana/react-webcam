@@ -84,7 +84,6 @@ export const getWsUrl = (endpoint: string): string => {
 
 // Default headers for all API requests
 const getDefaultHeaders = (): Record<string, string> => ({
-    "Content-Type": "application/json",
     Accept: "application/json",
     "User-Agent": "KYC-Frontend/1.0.0",
     "X-Requested-With": "XMLHttpRequest",
