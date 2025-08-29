@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, ArrowRight, CheckCircle } from "lucide-react";
+import { Shield, ArrowRight, CheckCircle, XCircle, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import documentImg from "../assets/images/document.png";
 import selfieImg from "../assets/images/selfie.png";
 import livenessImg from "../assets/images/liveness.png";
 import completeImg from "../assets/images/complete.png";
 import { useNavigate } from "react-router-dom";
+import { useVerificationStore } from "@/lib/store";
+import type { StepStatus } from "@/lib/store";
 
 const workflowSteps = [
     {
@@ -18,6 +20,7 @@ const workflowSteps = [
         image: selfieImg,
         stepNumber: "1 step",
         color: "from-indigo-500 to-indigo-600",
+        storeKey: "selfie" as const,
     },
     {
         id: 2,
@@ -27,6 +30,7 @@ const workflowSteps = [
         image: documentImg,
         stepNumber: "2 step",
         color: "from-blue-500 to-blue-600",
+        storeKey: "document" as const,
     },
     {
         id: 3,
@@ -36,6 +40,7 @@ const workflowSteps = [
         image: livenessImg,
         stepNumber: "3 step",
         color: "from-amber-500 to-amber-600",
+        storeKey: "liveness" as const,
     },
     {
         id: 4,
@@ -45,6 +50,7 @@ const workflowSteps = [
         image: completeImg,
         stepNumber: "4 step",
         color: "from-green-500 to-green-600",
+        storeKey: "complete" as const,
     },
 ];
 
@@ -89,6 +95,25 @@ export default function Home() {
     const onClickContinue = () => {
         navigator("/selfie");
     };
+
+    const { getStepStatus, getCompletedCount, getRejectedCount } =
+        useVerificationStore();
+    const completedCount = getCompletedCount();
+    const rejectedCount = getRejectedCount();
+    const totalSteps = 4;
+
+    const getStatusIcon = (status: StepStatus) => {
+        switch (status) {
+            case "completed":
+                return <CheckCircle className="w-6 h-6 text-green-500" />;
+            case "rejected":
+                return <XCircle className="w-6 h-6 text-red-500" />;
+            case "pending":
+            default:
+                return <Clock className="w-6 h-6 text-gray-400" />;
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
             <div className="container mx-auto px-4 py-12">
@@ -118,7 +143,7 @@ export default function Home() {
                             className="text-center mb-8"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.4 }}
+                            transition={{ duration: 0.6, delay: 1.2 }}
                         >
                             <h2 className="text-3xl font-bold text-gray-800 mb-4">
                                 Simple 4-Step Process
@@ -158,46 +183,54 @@ export default function Home() {
                             initial="hidden"
                             animate="visible"
                         >
-                            {workflowSteps.map((step, _) => (
-                                <motion.li
-                                    key={step.id}
-                                    className="group"
-                                    variants={cardVariants}
-                                    whileHover="hover"
-                                >
-                                    <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm overflow-hidden group-hover:shadow-2xl transition-all duration-300">
-                                        <CardContent className="p-0">
-                                            <div className="flex flex-col lg:flex-row h-full">
-                                                {/* Card Description */}
-                                                <div className="flex-1 px-8 py-4 flex flex-col justify-center">
-                                                    <div className="mb-4">
-                                                        <Badge
-                                                            className={`bg-gradient-to-r ${step.color} text-white border-0 px-4 py-2 text-sm font-semibold`}
-                                                        >
-                                                            {step.stepNumber}
-                                                        </Badge>
+                            {workflowSteps.map((step, _) => {
+                                const stepStatus = getStepStatus(step.storeKey);
+                                return (
+                                    <motion.li
+                                        key={step.id}
+                                        className="group"
+                                        variants={cardVariants}
+                                        whileHover="hover"
+                                    >
+                                        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm overflow-hidden group-hover:shadow-2xl transition-all duration-300">
+                                            <CardContent className="p-0">
+                                                <div className="flex flex-col lg:flex-row h-full">
+                                                    {/* Card Description */}
+                                                    <div className="flex-1 px-8 py-4 flex flex-col justify-center">
+                                                        <div className="flex items-center justify-between mb-4">
+                                                            <Badge
+                                                                className={`bg-gradient-to-r ${step.color} text-white border-0 px-4 py-2 text-sm font-semibold`}
+                                                            >
+                                                                {
+                                                                    step.stepNumber
+                                                                }
+                                                            </Badge>
+                                                            {getStatusIcon(
+                                                                stepStatus
+                                                            )}
+                                                        </div>
+                                                        <h3 className="text-2xl font-bold text-gray-800 mb-4 group-hover:text-blue-600 transition-colors duration-300">
+                                                            {step.title}
+                                                        </h3>
+                                                        <p className="text-gray-600 leading-relaxed text-base">
+                                                            {step.description}
+                                                        </p>
                                                     </div>
-                                                    <h3 className="text-2xl font-bold text-gray-800 mb-4 group-hover:text-blue-600 transition-colors duration-300">
-                                                        {step.title}
-                                                    </h3>
-                                                    <p className="text-gray-600 leading-relaxed text-base">
-                                                        {step.description}
-                                                    </p>
-                                                </div>
 
-                                                {/* Card Image (hidden on mobile) */}
-                                                <div className="hidden lg:block flex-shrink-0 w-1/4 h-auto overflow-hidden px-5">
-                                                    <motion.img
-                                                        src={step.image}
-                                                        alt={step.title}
-                                                        className="w-full h-full object-contain transition-transform duration-500"
-                                                    />
+                                                    {/* Card Image (hidden on mobile) */}
+                                                    <div className="hidden lg:block flex-shrink-0 w-1/4 h-auto overflow-hidden px-5">
+                                                        <motion.img
+                                                            src={step.image}
+                                                            alt={step.title}
+                                                            className="w-full h-full object-contain transition-transform duration-500"
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </motion.li>
-                            ))}
+                                            </CardContent>
+                                        </Card>
+                                    </motion.li>
+                                );
+                            })}
                         </motion.ul>
                     </div>
                 </section>
