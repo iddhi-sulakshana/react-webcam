@@ -1,30 +1,22 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-    CheckCircle,
-    Shield,
-    Award,
-    Star,
-    Sparkles,
-} from "lucide-react";
+import { CheckCircle, Shield, Award, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import ProgressStepper from "@/components/ProgressStepper";
 import CompletionModal from "@/components/CompletionModal";
 import { useVerificationStore } from "@/lib/store";
-import { useNavigate } from "react-router-dom";
 
 const Complete = () => {
     const [showModal, setShowModal] = useState(false);
     const [isAnimationComplete, setIsAnimationComplete] = useState(false);
     const { setStepStatus, getStepStatus } = useVerificationStore();
-    const navigate = useNavigate();
 
     // Mark complete step as completed when component mounts
     useEffect(() => {
         setStepStatus("complete", "completed");
-        
+
         // Start animation sequence
         const timer = setTimeout(() => {
             setIsAnimationComplete(true);
@@ -53,10 +45,6 @@ const Complete = () => {
             status: getStepStatus("liveness"),
         },
     ];
-
-    const allStepsCompleted = completedSteps.every(
-        (step) => step.status === "completed"
-    );
 
     const handleFinishVerification = () => {
         setShowModal(true);
@@ -98,7 +86,7 @@ const Complete = () => {
                                 ease: "easeInOut",
                             }}
                         />
-                        
+
                         {/* Main Success Circle */}
                         <div className="relative bg-gradient-to-br from-green-500 to-green-600 rounded-full p-8 shadow-2xl">
                             <CheckCircle className="w-24 h-24 text-white" />
@@ -174,7 +162,7 @@ const Complete = () => {
                             <h2 className="text-2xl font-bold text-green-900 mb-6 text-center">
                                 Verification Summary
                             </h2>
-                            
+
                             <div className="space-y-4">
                                 {completedSteps.map((step, index) => {
                                     const IconComponent = step.icon;
@@ -234,8 +222,9 @@ const Complete = () => {
                                 What Happens Next?
                             </h3>
                             <p className="text-blue-700 mb-4">
-                                Your verification is complete and has been submitted for review. 
-                                You will be redirected to complete the process.
+                                Your verification is complete and has been
+                                submitted for review. You will be redirected to
+                                complete the process.
                             </p>
                             <div className="flex items-center justify-center space-x-2 text-sm text-blue-600">
                                 <CheckCircle className="w-4 h-4" />
@@ -278,8 +267,16 @@ const Complete = () => {
                     transition={{ duration: 0.8, delay: 2.3 }}
                 >
                     {[
-                        { label: "Steps Completed", value: "4/4", icon: CheckCircle },
-                        { label: "Verification Status", value: "Success", icon: Shield },
+                        {
+                            label: "Steps Completed",
+                            value: "4/4",
+                            icon: CheckCircle,
+                        },
+                        {
+                            label: "Verification Status",
+                            value: "Success",
+                            icon: Shield,
+                        },
                         { label: "Security Level", value: "High", icon: Award },
                     ].map((stat, index) => {
                         const IconComponent = stat.icon;
@@ -323,16 +320,14 @@ const Complete = () => {
                         </span>
                     </div>
                     <p className="text-xs">
-                        Your verification data is encrypted and stored securely according to industry standards.
+                        Your verification data is encrypted and stored securely
+                        according to industry standards.
                     </p>
                 </motion.div>
             </div>
 
             {/* Completion Modal */}
-            <CompletionModal
-                isOpen={showModal}
-                onClose={handleModalClose}
-            />
+            <CompletionModal isOpen={showModal} onClose={handleModalClose} />
         </div>
     );
 };
