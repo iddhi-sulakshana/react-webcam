@@ -1,11 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shield, ArrowRight, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
@@ -13,6 +7,7 @@ import documentImg from "../assets/images/document.png";
 import selfieImg from "../assets/images/selfie.png";
 import livenessImg from "../assets/images/liveness.png";
 import completeImg from "../assets/images/complete.png";
+import { useNavigate } from "react-router-dom";
 
 const workflowSteps = [
     {
@@ -90,12 +85,16 @@ const cardVariants = {
 };
 
 export default function Home() {
+    const navigator = useNavigate();
+    const onClickContinue = () => {
+        navigator("/selfie");
+    };
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
             <div className="container mx-auto px-4 py-12">
                 {/* Header Section */}
                 <motion.div
-                    className="text-center mb-16"
+                    className="text-center"
                     initial={{ opacity: 0, y: -30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8 }}
@@ -107,13 +106,9 @@ export default function Home() {
                     >
                         <Shield className="w-12 h-12 text-white" />
                     </motion.div>
-                    <h1 className="text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    <h1 className="text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text">
                         KYC Verification
                     </h1>
-                    <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                        Effortless Identity Verification with Our Streamlined
-                        Video Process
-                    </p>
                 </motion.div>
 
                 {/* Steps Section */}
@@ -146,11 +141,7 @@ export default function Home() {
                                 whileTap={{ scale: 0.95 }}
                             >
                                 <Button
-                                    onClick={() =>
-                                        console.log(
-                                            "Continue to KYC verification"
-                                        )
-                                    }
+                                    onClick={onClickContinue}
                                     size="lg"
                                     className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-12 py-4 text-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 mb-10"
                                 >
@@ -167,7 +158,7 @@ export default function Home() {
                             initial="hidden"
                             animate="visible"
                         >
-                            {workflowSteps.map((step, index) => (
+                            {workflowSteps.map((step, _) => (
                                 <motion.li
                                     key={step.id}
                                     className="group"
@@ -178,7 +169,7 @@ export default function Home() {
                                         <CardContent className="p-0">
                                             <div className="flex flex-col lg:flex-row h-full">
                                                 {/* Card Description */}
-                                                <div className="flex-1 p-8 flex flex-col justify-center">
+                                                <div className="flex-1 px-8 py-4 flex flex-col justify-center">
                                                     <div className="mb-4">
                                                         <Badge
                                                             className={`bg-gradient-to-r ${step.color} text-white border-0 px-4 py-2 text-sm font-semibold`}
@@ -195,7 +186,7 @@ export default function Home() {
                                                 </div>
 
                                                 {/* Card Image (hidden on mobile) */}
-                                                <div className="hidden lg:block flex-shrink-0 w-1/4 h-auto overflow-hidden px-5 ">
+                                                <div className="hidden lg:block flex-shrink-0 w-1/4 h-auto overflow-hidden px-5">
                                                     <motion.img
                                                         src={step.image}
                                                         alt={step.title}
@@ -223,9 +214,7 @@ export default function Home() {
                         whileTap={{ scale: 0.95 }}
                     >
                         <Button
-                            onClick={() =>
-                                console.log("Continue to KYC verification")
-                            }
+                            onClick={onClickContinue}
                             size="lg"
                             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-12 py-4 text-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                         >
