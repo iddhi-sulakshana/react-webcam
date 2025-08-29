@@ -10,7 +10,10 @@ import {
     ArrowUp,
     ArrowDown,
     CheckCircle,
+    Smartphone,
+    QrCode,
 } from "lucide-react";
+import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Webcam from "react-webcam";
@@ -30,7 +33,9 @@ interface RotationStatus {
 const Liveness = () => {
     const webcamRef = useRef<Webcam>(null);
     const [isWebcamActive, setIsWebcamActive] = useState(false);
-    const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+    const [facingMode, setFacingMode] = useState<"user" | "environment">(
+        "user"
+    );
     const [rotationStatus, setRotationStatus] = useState<RotationStatus>({
         left: false,
         right: false,
@@ -42,6 +47,7 @@ const Liveness = () => {
     const [isCompleted, setIsCompleted] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [timer, setTimer] = useState(0);
+    const [showQRCode, setShowQRCode] = useState(false);
 
     const { setStepStatus } = useVerificationStore();
     const navigate = useNavigate();
@@ -69,47 +75,49 @@ const Liveness = () => {
         },
     };
 
-    const getNextInstruction = (current: RotationDirection): RotationDirection => {
+    const getNextInstruction = (
+        current: RotationDirection
+    ): RotationDirection => {
         const order: RotationDirection[] = ["left", "right", "up", "down"];
         const currentIndex = order.indexOf(current);
         const remainingDirections = order.filter(
             (direction) => !rotationStatus[direction]
         );
-        
+
         if (remainingDirections.length === 0) return current;
-        
+
         // Find next unCompleted direction
         for (let i = currentIndex + 1; i < order.length; i++) {
             if (!rotationStatus[order[i]]) {
                 return order[i];
             }
         }
-        
+
         // If we've reached the end, find the first uncompleted
         for (let i = 0; i < currentIndex; i++) {
             if (!rotationStatus[order[i]]) {
                 return order[i];
             }
         }
-        
+
         return remainingDirections[0];
     };
 
     const completeRotation = (direction: RotationDirection) => {
         setRotationStatus((prev) => {
             const newStatus = { ...prev, [direction]: true };
-            
+
             // Check if all rotations are complete
             const allComplete = Object.values(newStatus).every(Boolean);
             if (allComplete) {
                 setIsCompleted(true);
                 return newStatus;
             }
-            
+
             // Move to next instruction
             const nextInstruction = getNextInstruction(direction);
             setCurrentInstruction(nextInstruction);
-            
+
             return newStatus;
         });
     };
@@ -120,15 +128,25 @@ const Liveness = () => {
 
         const interval = setInterval(() => {
             setTimer((prev) => prev + 1);
-            
+
             // Simulate automatic completion after 3 seconds on current instruction
-            if (timer > 0 && timer % 60 === 0 && !rotationStatus[currentInstruction]) {
+            if (
+                timer > 0 &&
+                timer % 60 === 0 &&
+                !rotationStatus[currentInstruction]
+            ) {
                 completeRotation(currentInstruction);
             }
         }, 50);
 
         return () => clearInterval(interval);
-    }, [isWebcamActive, timer, currentInstruction, rotationStatus, isCompleted]);
+    }, [
+        isWebcamActive,
+        timer,
+        currentInstruction,
+        rotationStatus,
+        isCompleted,
+    ]);
 
     const switchCamera = () => {
         setFacingMode(facingMode === "user" ? "environment" : "user");
@@ -198,6 +216,19 @@ const Liveness = () => {
         ];
     };
 
+    const getCurrentUrl = () => {
+        return window.location.href;
+    };
+
+    const copyUrlToClipboard = async () => {
+        try {
+            await navigator.clipboard.writeText(getCurrentUrl());
+            // You could add a toast notification here
+        } catch (err) {
+            console.error("Failed to copy: ", err);
+        }
+    };
+
     return (
         <div className="container mx-auto px-4 py-8">
             <ProgressStepper currentStep={3} />
@@ -218,12 +249,98 @@ const Liveness = () => {
                     </p>
                 </motion.div>
 
+                {/* Mobile QR Code Section */}
+                <motion.div
+                    className="mb-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                >
+                    <Card className="bg-blue-50 border-blue-200">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                    <div className="bg-blue-500 text-white p-2 rounded-lg mr-3">
+                                        <Smartphone className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-blue-900">
+                                            Use Mobile Device
+                                        </h3>
+                                        <p className="text-sm text-blue-700">
+                                            Better camera experience on mobile
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={() => setShowQRCode(!showQRCode)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                >
+                                    <QrCode className="w-4 h-4 mr-2" />
+                                    {showQRCode ? "Hide QR" : "Show QR"}
+                                </Button>
+                            </div>
+
+                            <AnimatePresence>
+                                {showQRCode && (
+                                    <motion.div
+                                        className="mt-4 pt-4 border-t border-blue-200"
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        <div className="flex flex-col md:flex-row items-center gap-4">
+                                            <div className="bg-white p-4 rounded-lg border border-blue-200">
+                                                <QRCode
+                                                    value={getCurrentUrl()}
+                                                    size={128}
+                                                    level="M"
+                                                    className="w-full h-full"
+                                                />
+                                            </div>
+                                            <div className="flex-1 text-center md:text-left">
+                                                <h4 className="font-semibold text-blue-900 mb-2">
+                                                    Scan with Mobile Camera
+                                                </h4>
+                                                <p className="text-sm text-blue-700 mb-3">
+                                                    Open your mobile camera and
+                                                    scan this QR code to
+                                                    continue the liveness check
+                                                    on your phone.
+                                                </p>
+                                                <div className="flex flex-col sm:flex-row gap-2">
+                                                    <Button
+                                                        onClick={
+                                                            copyUrlToClipboard
+                                                        }
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                                    >
+                                                        Copy Link
+                                                    </Button>
+                                                    <span className="text-xs text-blue-600 self-center">
+                                                        Or share this page URL
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
                 {/* Progress Indicator */}
                 <motion.div
                     className="mb-6"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.6, delay: 0.1 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
                 >
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-gray-700">
@@ -297,7 +414,7 @@ const Liveness = () => {
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
                 >
                     <Card className="mb-6">
                         <CardContent className="p-6">
@@ -363,10 +480,10 @@ const Liveness = () => {
                                                                     }}
                                                                     transition={{
                                                                         duration: 0.8,
-                                                                        delay:
-                                                                            segment.completed
-                                                                                ? index * 0.2
-                                                                                : 0,
+                                                                        delay: segment.completed
+                                                                            ? index *
+                                                                              0.2
+                                                                            : 0,
                                                                     }}
                                                                 />
                                                             </svg>
@@ -405,8 +522,8 @@ const Liveness = () => {
                                             {!isCompleted && (
                                                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
                                                     <div className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm text-center">
-                                                        Position your face in the
-                                                        circle
+                                                        Position your face in
+                                                        the circle
                                                         <br />
                                                         Follow the movement
                                                         instructions
@@ -432,7 +549,8 @@ const Liveness = () => {
                                                     }}
                                                 >
                                                     <div className="bg-green-600 text-white px-6 py-3 rounded-lg text-lg font-semibold">
-                                                        ✓ Liveness Check Complete!
+                                                        ✓ Liveness Check
+                                                        Complete!
                                                     </div>
                                                 </motion.div>
                                             )}
@@ -463,7 +581,7 @@ const Liveness = () => {
                     className="space-y-4"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.4 }}
+                    transition={{ duration: 0.6, delay: 0.5 }}
                 >
                     {!isWebcamActive ? (
                         <div className="flex flex-col sm:flex-row gap-4">
@@ -524,7 +642,8 @@ const Liveness = () => {
                                         size="lg"
                                     >
                                         <Check className="w-5 h-5 mr-2" />
-                                        Complete {currentInstruction.toUpperCase()}{" "}
+                                        Complete{" "}
+                                        {currentInstruction.toUpperCase()}{" "}
                                         Movement
                                     </Button>
 
@@ -561,7 +680,7 @@ const Liveness = () => {
                         className="mt-6"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.6 }}
+                        transition={{ duration: 0.6, delay: 0.7 }}
                     >
                         <Card className="bg-gray-50">
                             <CardContent className="p-4">
@@ -578,7 +697,8 @@ const Liveness = () => {
                                                     direction as RotationDirection
                                                 ];
                                             const isCurrent =
-                                                currentInstruction === direction;
+                                                currentInstruction ===
+                                                direction;
 
                                             return (
                                                 <div
@@ -626,7 +746,7 @@ const Liveness = () => {
                     className="mt-8 bg-amber-50 border border-amber-200 rounded-lg p-6"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 0.6, delay: 0.8 }}
+                    transition={{ duration: 0.6, delay: 0.9 }}
                 >
                     <h3 className="font-semibold text-amber-900 mb-3">
                         Tips for liveness check:

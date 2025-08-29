@@ -1,6 +1,15 @@
 import { useState, useRef, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Camera, Upload, RotateCcw, Check, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    Camera,
+    Upload,
+    RotateCcw,
+    Check,
+    X,
+    Smartphone,
+    QrCode,
+} from "lucide-react";
+import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Webcam from "react-webcam";
@@ -17,6 +26,7 @@ const Selfie = () => {
         "user"
     );
     const [isProcessing, setIsProcessing] = useState(false);
+    const [showQRCode, setShowQRCode] = useState(false);
 
     const { setStepStatus } = useVerificationStore();
     const navigate = useNavigate();
@@ -72,6 +82,19 @@ const Selfie = () => {
         facingMode: facingMode,
     };
 
+    const getCurrentUrl = () => {
+        return window.location.href;
+    };
+
+    const copyUrlToClipboard = async () => {
+        try {
+            await navigator.clipboard.writeText(getCurrentUrl());
+            // You could add a toast notification here
+        } catch (err) {
+            console.error("Failed to copy: ", err);
+        }
+    };
+
     return (
         <div className="container mx-auto px-4 py-8">
             {/* Progress Stepper */}
@@ -95,11 +118,97 @@ const Selfie = () => {
                     </p>
                 </motion.div>
 
+                {/* Mobile QR Code Section */}
+                <motion.div
+                    className="mb-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                >
+                    <Card className="bg-blue-50 border-blue-200">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                    <div className="bg-blue-500 text-white p-2 rounded-lg mr-3">
+                                        <Smartphone className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        useVerifica
+                                        <h3 className="font-semibold text-blue-900">
+                                            Use Mobile Device
+                                        </h3>
+                                        <p className="text-sm text-blue-700">
+                                            Better camera experience on mobile
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={() => setShowQRCode(!showQRCode)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                >
+                                    <QrCode className="w-4 h-4 mr-2" />
+                                    {showQRCode ? "Hide QR" : "Show QR"}
+                                </Button>
+                            </div>
+
+                            <AnimatePresence>
+                                {showQRCode && (
+                                    <motion.div
+                                        className="mt-4 pt-4 border-t border-blue-200"
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        <div className="flex flex-col md:flex-row items-center gap-4">
+                                            <div className="bg-white p-4 rounded-lg border border-blue-200">
+                                                <QRCode
+                                                    value={getCurrentUrl()}
+                                                    size={128}
+                                                    level="M"
+                                                    className="w-full h-full"
+                                                />
+                                            </div>
+                                            <div className="flex-1 text-center md:text-left">
+                                                <h4 className="font-semibold text-blue-900 mb-2">
+                                                    Scan with Mobile Camera
+                                                </h4>
+                                                <p className="text-sm text-blue-700 mb-3">
+                                                    Open your mobile camera and
+                                                    scan this QR code to take
+                                                    your selfie on your phone.
+                                                </p>
+                                                <div className="flex flex-col sm:flex-row gap-2">
+                                                    <Button
+                                                        onClick={
+                                                            copyUrlToClipboard
+                                                        }
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                                    >
+                                                        Copy Link
+                                                    </Button>
+                                                    <span className="text-xs text-blue-600 self-center">
+                                                        Or share this page URL
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
                 {/* Camera/Preview Area */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
                 >
                     <Card className="mb-6">
                         <CardContent className="p-6">
@@ -170,7 +279,7 @@ const Selfie = () => {
                     className="space-y-4"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.4 }}
+                    transition={{ duration: 0.6, delay: 0.5 }}
                 >
                     {!capturedImage ? (
                         <div className="flex flex-col sm:flex-row gap-4">
@@ -285,7 +394,7 @@ const Selfie = () => {
                     className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 0.6, delay: 0.6 }}
+                    transition={{ duration: 0.6, delay: 0.7 }}
                 >
                     <h3 className="font-semibold text-blue-900 mb-3">
                         Tips for a good selfie:
