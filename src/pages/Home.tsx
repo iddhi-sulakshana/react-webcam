@@ -1,15 +1,14 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, ArrowRight, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Shield, CheckCircle, XCircle, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import documentImg from "../assets/images/document.png";
 import selfieImg from "../assets/images/selfie.png";
 import livenessImg from "../assets/images/liveness.png";
 import completeImg from "../assets/images/complete.png";
-import { useNavigate } from "react-router-dom";
 import { useVerificationStore } from "@/lib/store";
 import type { StepStatus } from "@/lib/store";
+import VerificationButton from "@/components/VerificationButton";
 
 const workflowSteps = [
     {
@@ -91,16 +90,7 @@ const cardVariants = {
 };
 
 export default function Home() {
-    const navigator = useNavigate();
-    const onClickContinue = () => {
-        navigator("/selfie");
-    };
-
-    const { getStepStatus, getCompletedCount, getRejectedCount } =
-        useVerificationStore();
-    const completedCount = getCompletedCount();
-    const rejectedCount = getRejectedCount();
-    const totalSteps = 4;
+    const { getStepStatus } = useVerificationStore();
 
     const getStatusIcon = (status: StepStatus) => {
         switch (status) {
@@ -115,167 +105,123 @@ export default function Home() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-            <div className="container mx-auto px-4 py-12">
-                {/* Header Section */}
+        <div className="container mx-auto px-4 py-12">
+            {/* Header Section */}
+            <motion.div
+                className="text-center"
+                initial={{ opacity: 0, y: -30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+            >
                 <motion.div
-                    className="text-center"
-                    initial={{ opacity: 0, y: -30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8 }}
+                    className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mb-8 shadow-2xl"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    transition={{ duration: 0.3 }}
                 >
-                    <motion.div
-                        className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mb-8 shadow-2xl"
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <Shield className="w-12 h-12 text-white" />
-                    </motion.div>
-                    <h1 className="text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text">
-                        KYC Verification
-                    </h1>
+                    <Shield className="w-12 h-12 text-white" />
                 </motion.div>
+                <h1 className="text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text">
+                    KYC Verification
+                </h1>
+            </motion.div>
 
-                {/* Steps Section */}
-                <section className="steps-section">
-                    <div className="max-w-4xl mx-auto">
-                        <motion.div
-                            className="text-center mb-8"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 1.2 }}
-                        >
-                            <h2 className="text-3xl font-bold text-gray-800 mb-4">
-                                Simple 4-Step Process
-                            </h2>
-                            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                                Complete your verification in minutes with our
-                                intuitive step-by-step process
-                            </p>
-                        </motion.div>
+            {/* Steps Section */}
+            <section className="steps-section mb-10">
+                <div className="max-w-4xl mx-auto">
+                    <motion.div
+                        className="text-center mb-8"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.4 }}
+                    >
+                        <h2 className="text-3xl font-bold text-gray-800 mb-4">
+                            Simple 4-Step Process
+                        </h2>
+                        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                            Complete your verification in minutes with our
+                            intuitive step-by-step process
+                        </p>
+                    </motion.div>
 
-                        {/* Simple Action Button */}
-                        <motion.div
-                            className="text-center"
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 1.2 }}
-                        >
-                            <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                <Button
-                                    onClick={onClickContinue}
-                                    size="lg"
-                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-12 py-4 text-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 mb-10"
+                    <VerificationButton />
+
+                    {/* Steps List */}
+                    <motion.ul
+                        className="space-y-8"
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        {workflowSteps.map((step, _) => {
+                            const stepStatus = getStepStatus(step.storeKey);
+                            return (
+                                <motion.li
+                                    key={step.id}
+                                    className="group"
+                                    variants={cardVariants}
+                                    whileHover="hover"
                                 >
-                                    Start Verification
-                                    <ArrowRight className="ml-3 w-6 h-6" />
-                                </Button>
-                            </motion.div>
-                        </motion.div>
-
-                        {/* Steps List */}
-                        <motion.ul
-                            className="space-y-8"
-                            variants={containerVariants}
-                            initial="hidden"
-                            animate="visible"
-                        >
-                            {workflowSteps.map((step, _) => {
-                                const stepStatus = getStepStatus(step.storeKey);
-                                return (
-                                    <motion.li
-                                        key={step.id}
-                                        className="group"
-                                        variants={cardVariants}
-                                        whileHover="hover"
-                                    >
-                                        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm overflow-hidden group-hover:shadow-2xl transition-all duration-300">
-                                            <CardContent className="p-0">
-                                                <div className="flex flex-col lg:flex-row h-full">
-                                                    {/* Card Description */}
-                                                    <div className="flex-1 px-8 py-4 flex flex-col justify-center">
-                                                        <div className="flex items-center justify-between mb-4">
-                                                            <Badge
-                                                                className={`bg-gradient-to-r ${step.color} text-white border-0 px-4 py-2 text-sm font-semibold`}
-                                                            >
-                                                                {
-                                                                    step.stepNumber
-                                                                }
-                                                            </Badge>
-                                                            {getStatusIcon(
-                                                                stepStatus
-                                                            )}
-                                                        </div>
-                                                        <h3 className="text-2xl font-bold text-gray-800 mb-4 group-hover:text-blue-600 transition-colors duration-300">
-                                                            {step.title}
-                                                        </h3>
-                                                        <p className="text-gray-600 leading-relaxed text-base">
-                                                            {step.description}
-                                                        </p>
+                                    <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm overflow-hidden group-hover:shadow-2xl transition-all duration-300">
+                                        <CardContent className="p-0">
+                                            <div className="flex flex-col lg:flex-row h-full">
+                                                {/* Card Description */}
+                                                <div className="flex-1 px-8 py-4 flex flex-col justify-center">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <Badge
+                                                            className={`bg-gradient-to-r ${step.color} text-white border-0 px-4 py-2 text-sm font-semibold`}
+                                                        >
+                                                            {step.stepNumber}
+                                                        </Badge>
+                                                        {getStatusIcon(
+                                                            stepStatus
+                                                        )}
                                                     </div>
-
-                                                    {/* Card Image (hidden on mobile) */}
-                                                    <div className="hidden lg:block flex-shrink-0 w-1/4 h-auto overflow-hidden px-5">
-                                                        <motion.img
-                                                            src={step.image}
-                                                            alt={step.title}
-                                                            className="w-full h-full object-contain transition-transform duration-500"
-                                                        />
-                                                    </div>
+                                                    <h3 className="text-2xl font-bold text-gray-800 mb-4 group-hover:text-blue-600 transition-colors duration-300">
+                                                        {step.title}
+                                                    </h3>
+                                                    <p className="text-gray-600 leading-relaxed text-base">
+                                                        {step.description}
+                                                    </p>
                                                 </div>
-                                            </CardContent>
-                                        </Card>
-                                    </motion.li>
-                                );
-                            })}
-                        </motion.ul>
-                    </div>
-                </section>
 
-                {/* Simple Action Button */}
-                <motion.div
-                    className="mt-16 text-center"
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 1.2 }}
-                >
-                    <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <Button
-                            onClick={onClickContinue}
-                            size="lg"
-                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-12 py-4 text-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                        >
-                            Start Verification
-                            <ArrowRight className="ml-3 w-6 h-6" />
-                        </Button>
-                    </motion.div>
-                </motion.div>
+                                                {/* Card Image (hidden on mobile) */}
+                                                <div className="hidden lg:block flex-shrink-0 w-1/4 h-auto overflow-hidden px-5">
+                                                    <motion.img
+                                                        src={step.image}
+                                                        alt={step.title}
+                                                        className="w-full h-full object-contain transition-transform duration-500"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </motion.li>
+                            );
+                        })}
+                    </motion.ul>
+                </div>
+            </section>
 
-                {/* Footer Note */}
-                <motion.div
-                    className="text-center mt-12 text-gray-500"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 1.4 }}
-                >
-                    <div className="flex items-center justify-center space-x-2 mb-4">
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                        <span className="text-sm font-medium">
-                            Bank-level security
-                        </span>
-                    </div>
-                    <p className="text-sm">
-                        Your privacy and security are our top priorities. All
-                        data is encrypted and stored securely.
-                    </p>
-                </motion.div>
-            </div>
+            <VerificationButton />
+
+            {/* Footer Note */}
+            <motion.div
+                className="text-center text-gray-500"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 1.4 }}
+            >
+                <div className="flex items-center justify-center space-x-2 mb-4">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-sm font-medium">
+                        Bank-level security
+                    </span>
+                </div>
+                <p className="text-sm">
+                    Your privacy and security are our top priorities. All data
+                    is encrypted and stored securely.
+                </p>
+            </motion.div>
         </div>
     );
 }

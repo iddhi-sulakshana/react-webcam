@@ -23,9 +23,9 @@ interface VerificationStore {
 }
 
 const initialSteps: Step = {
-    selfie: "completed",
-    document: "completed",
-    liveness: "completed",
+    selfie: "pending",
+    document: "pending",
+    liveness: "pending",
     complete: "pending",
 };
 
