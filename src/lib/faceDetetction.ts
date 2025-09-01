@@ -27,11 +27,6 @@ export const runDetection = async (
     });
 
     let isRunning = true;
-    let lastValidationTime = 0;
-    let lastValidationResult = {
-        isFrontDirected: false,
-        isCloserToScreen: false,
-    };
 
     const detect = async (net: typeof detector) => {
         if (!isRunning) return;
@@ -42,81 +37,51 @@ export const runDetection = async (
             return;
         }
 
-        const ctx = canvas.getContext("2d");
-        const currentTime = Date.now();
-
-        // Always draw video every 100ms
-        setTimeout(() => {
-            if (!isRunning) return;
-
-            requestAnimationFrame(() => {
-                if (
-                    !isRunning ||
-                    !ctx ||
-                    video.videoWidth === 0 ||
-                    video.videoHeight === 0
-                )
-                    return;
-
-                // Draw the video on canvas first
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                // Use cached validation result for drawing
-                cb(
-                    ctx,
-                    { yaw: 0, turn: 0, zDistance: 0, xDistance: 0 },
-                    lastValidationResult.isFrontDirected,
-                    lastValidationResult.isCloserToScreen
-                );
+        try {
+            const faces = await net.estimateFaces(video, {
+                flipHorizontal: false,
             });
-            detect(net);
-        }, 100);
+            const ctx = canvas.getContext("2d");
 
-        // Run face validation every 500ms
-        if (currentTime - lastValidationTime >= 500 && ctx) {
-            try {
-                const faces = await net.estimateFaces(video, {
-                    flipHorizontal: false,
-                });
+            setTimeout(() => {
+                if (!isRunning) return;
 
-                if (faces && faces.length > 0) {
+                requestAnimationFrame(() => {
+                    if (
+                        !isRunning ||
+                        !ctx ||
+                        video.videoWidth === 0 ||
+                        video.videoHeight === 0
+                    )
+                        return;
+
+                    // Draw the video on canvas first
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Then draw the mesh overlay
                     const angle = drawMesh(faces[0], ctx);
                     if (angle) {
                         const isCloserToScreen = isFaceCloserToScreen(angle);
                         if (isCloserToScreen) {
                             const isFrontDirected = isFaceFrontDirected(angle);
-                            lastValidationResult = {
-                                isFrontDirected,
-                                isCloserToScreen,
-                            };
+                            cb(ctx, angle, isFrontDirected, isCloserToScreen);
                         } else {
-                            lastValidationResult = {
-                                isFrontDirected: false,
-                                isCloserToScreen: false,
-                            };
+                            cb(ctx, angle, false, false);
                         }
                     } else {
-                        lastValidationResult = {
-                            isFrontDirected: false,
-                            isCloserToScreen: false,
-                        };
+                        cb(
+                            ctx,
+                            { yaw: 0, turn: 0, zDistance: 0, xDistance: 0 },
+                            false,
+                            false
+                        );
                     }
-                } else {
-                    lastValidationResult = {
-                        isFrontDirected: false,
-                        isCloserToScreen: false,
-                    };
-                }
-
-                lastValidationTime = currentTime;
-            } catch (error) {
-                console.error("Face detection error:", error);
-                lastValidationResult = {
-                    isFrontDirected: false,
-                    isCloserToScreen: false,
-                };
-                lastValidationTime = currentTime;
-            }
+                });
+                detect(detector);
+            }, 100);
+        } catch (error) {
+            console.error("Face detection error:", error);
+            setTimeout(() => detect(net), 100);
         }
     };
 
