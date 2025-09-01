@@ -21,9 +21,10 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Webcam from "react-webcam";
 
-type RotationDirection = "left" | "right" | "up" | "down";
+type RotationDirection = "front" | "left" | "right" | "up" | "down";
 
 interface RotationStatus {
+    front: boolean;
     left: boolean;
     right: boolean;
     up: boolean;
@@ -37,13 +38,14 @@ const Liveness = () => {
         "user"
     );
     const [rotationStatus, setRotationStatus] = useState<RotationStatus>({
+        front: false,
         left: false,
         right: false,
         up: false,
         down: false,
     });
     const [currentInstruction, setCurrentInstruction] =
-        useState<RotationDirection>("left");
+        useState<RotationDirection>("front");
     const [isCompleted, setIsCompleted] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [timer, setTimer] = useState(0);
@@ -93,7 +95,13 @@ const Liveness = () => {
     const getNextInstruction = (
         current: RotationDirection
     ): RotationDirection => {
-        const order: RotationDirection[] = ["left", "right", "up", "down"];
+        const order: RotationDirection[] = [
+            "front",
+            "left",
+            "right",
+            "up",
+            "down",
+        ];
         const currentIndex = order.indexOf(current);
         const remainingDirections = order.filter(
             (direction) => !rotationStatus[direction]
@@ -169,12 +177,13 @@ const Liveness = () => {
 
     const resetLiveness = () => {
         setRotationStatus({
+            front: false,
             left: false,
             right: false,
             up: false,
             down: false,
         });
-        setCurrentInstruction("left");
+        setCurrentInstruction("front");
         setIsCompleted(false);
         setTimer(0);
     };
@@ -208,6 +217,11 @@ const Liveness = () => {
 
     const getBoundingCircleSegments = () => {
         return [
+            {
+                direction: "front" as RotationDirection,
+                rotation: 0,
+                completed: rotationStatus.front,
+            },
             {
                 direction: "left" as RotationDirection,
                 rotation: 180,
@@ -265,7 +279,8 @@ const Liveness = () => {
                             Head Movement Progress
                         </span>
                         <span className="text-sm text-gray-500">
-                            {getCompletedCount()} of 4 completed
+                            {getCompletedCount()} of{" "}
+                            {Object.keys(rotationInstructions).length} completed
                         </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -273,7 +288,12 @@ const Liveness = () => {
                             className="bg-green-600 h-2 rounded-full"
                             initial={{ width: 0 }}
                             animate={{
-                                width: `${(getCompletedCount() / 4) * 100}%`,
+                                width: `${
+                                    (getCompletedCount() /
+                                        Object.keys(rotationInstructions)
+                                            .length) *
+                                    100
+                                }%`,
                             }}
                             transition={{ duration: 0.5 }}
                         />
