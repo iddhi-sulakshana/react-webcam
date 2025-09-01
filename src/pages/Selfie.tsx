@@ -16,6 +16,7 @@ import Webcam from "react-webcam";
 import ProgressStepper from "@/components/ProgressStepper";
 import { useVerificationStore } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
+import { runDetection } from "@/lib/faceDetetction";
 
 const Selfie = () => {
     const webcamRef = useRef<Webcam>(null);
@@ -27,6 +28,7 @@ const Selfie = () => {
     );
     const [isProcessing, setIsProcessing] = useState(false);
     const [showQRCode, setShowQRCode] = useState(false);
+    const [loaded, setLoaded] = useState(false);
 
     const { setStepStatus } = useVerificationStore();
     const navigate = useNavigate();
@@ -75,11 +77,14 @@ const Selfie = () => {
         // Navigate to next step
         navigate("/document");
     };
-
+    const inputResolution = {
+        width: 730,
+        height: 640,
+    };
     const videoConstraints = {
-        width: 1280,
-        height: 720,
-        facingMode: facingMode,
+        width: inputResolution.width,
+        height: inputResolution.height,
+        facingMode: "user",
     };
 
     const getCurrentUrl = () => {
@@ -93,6 +98,19 @@ const Selfie = () => {
         } catch (err) {
             console.error("Failed to copy: ", err);
         }
+    };
+
+    const handleVideoLoad = async (
+        videoNode: React.ChangeEvent<HTMLVideoElement>
+    ) => {
+        console.log("handleVideoLoad");
+        const video = videoNode.target;
+        if (video.readyState !== 4) return;
+        if (loaded) return;
+        console.log("video loaded");
+        await runDetection(video, () => {});
+        console.log("detection loaded");
+        setLoaded(true);
     };
 
     return (
@@ -211,7 +229,14 @@ const Selfie = () => {
                     transition={{ duration: 0.6, delay: 0.3 }}
                 >
                     <Card className="mb-6">
-                        <CardContent className="p-6">
+                        <CardContent>
+                            {loaded ? (
+                                <></>
+                            ) : (
+                                <div className="text-center text-gray-300">
+                                    Loading the face detection model...
+                                </div>
+                            )}
                             <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video">
                                 {capturedImage ? (
                                     // Preview captured image
@@ -232,11 +257,14 @@ const Selfie = () => {
                                     // Active webcam
                                     <div className="relative w-full h-full">
                                         <Webcam
+                                            width={inputResolution.width}
+                                            height={inputResolution.height}
                                             ref={webcamRef}
                                             audio={false}
                                             screenshotFormat="image/jpeg"
                                             videoConstraints={videoConstraints}
                                             className="w-full h-full object-cover"
+                                            onLoadedData={handleVideoLoad}
                                         />
 
                                         {/* Camera overlay */}
