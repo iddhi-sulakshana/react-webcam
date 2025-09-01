@@ -10,10 +10,7 @@ import {
     FileText,
     Plane,
     ArrowLeft,
-    Smartphone,
-    QrCode,
 } from "lucide-react";
-import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +28,7 @@ import { base64ToFile } from "@/lib/imageUtil";
 import { AxiosError } from "axios";
 import { toast } from "react-toastify";
 import buildUrlSessionTokens from "@/lib/buildUrlSessionTokens";
+import MobileQR from "@/components/MobileQR";
 
 type DocumentType = "id" | "driver_license" | "passport" | null;
 type CaptureStep = "front" | "back" | "single";
@@ -54,7 +52,6 @@ const Document = () => {
         "environment"
     );
     const [isProcessing, setIsProcessing] = useState(false);
-    const [showQRCode, setShowQRCode] = useState(false);
     const [showIdFrontImage, setShowIdFrontImage] = useState(false);
 
     const { setStepStatus, getStepStatus } = useVerificationStore();
@@ -297,19 +294,6 @@ const Document = () => {
         facingMode: facingMode,
     };
 
-    const getCurrentUrl = () => {
-        return window.location.href;
-    };
-
-    const copyUrlToClipboard = async () => {
-        try {
-            await navigator.clipboard.writeText(getCurrentUrl());
-            // You could add a toast notification here
-        } catch (err) {
-            console.error("Failed to copy: ", err);
-        }
-    };
-
     // Document Type Selection Screen
     if (!selectedDocumentType) {
         return (
@@ -431,90 +415,7 @@ const Document = () => {
                     </p>
                 </motion.div>
 
-                {/* Mobile QR Code Section */}
-                <motion.div
-                    className="mb-6"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.1 }}
-                >
-                    <Card className="bg-blue-50 border-blue-200">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <div className="bg-blue-500 text-white p-2 rounded-lg mr-3">
-                                        <Smartphone className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-blue-900">
-                                            Use Mobile Device
-                                        </h3>
-                                        <p className="text-sm text-blue-700">
-                                            Better camera experience on mobile
-                                        </p>
-                                    </div>
-                                </div>
-                                <Button
-                                    onClick={() => setShowQRCode(!showQRCode)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                                >
-                                    <QrCode className="w-4 h-4 mr-2" />
-                                    {showQRCode ? "Hide QR" : "Show QR"}
-                                </Button>
-                            </div>
-
-                            <AnimatePresence>
-                                {showQRCode && (
-                                    <motion.div
-                                        className="mt-4 pt-4 border-t border-blue-200"
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: "auto" }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        transition={{ duration: 0.3 }}
-                                    >
-                                        <div className="flex flex-col md:flex-row items-center gap-4">
-                                            <div className="bg-white p-4 rounded-lg border border-blue-200">
-                                                <QRCode
-                                                    value={getCurrentUrl()}
-                                                    size={128}
-                                                    level="M"
-                                                    className="w-full h-full"
-                                                />
-                                            </div>
-                                            <div className="flex-1 text-center md:text-left">
-                                                <h4 className="font-semibold text-blue-900 mb-2">
-                                                    Scan with Mobile Camera
-                                                </h4>
-                                                <p className="text-sm text-blue-700 mb-3">
-                                                    Open your mobile camera and
-                                                    scan this QR code to capture
-                                                    your document on your phone.
-                                                </p>
-                                                <div className="flex flex-col sm:flex-row gap-2">
-                                                    <Button
-                                                        onClick={
-                                                            copyUrlToClipboard
-                                                        }
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                                                    >
-                                                        Copy Link
-                                                    </Button>
-                                                    <span className="text-xs text-blue-600 self-center">
-                                                        Or share this page URL
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </CardContent>
-                    </Card>
-                </motion.div>
+                <MobileQR />
 
                 {/* Progress and Preview for multi-step documents */}
                 {config.requiredSides.length > 1 && (

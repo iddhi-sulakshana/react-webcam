@@ -1,29 +1,20 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    Camera,
-    RotateCcw,
-    Check,
-    X,
-    Smartphone,
-    QrCode,
-    CopyIcon,
-} from "lucide-react";
-import QRCode from "react-qr-code";
+import MobileQR from "@/components/MobileQR";
+import ProgressStepper from "@/components/ProgressStepper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import Webcam from "react-webcam";
-import ProgressStepper from "@/components/ProgressStepper";
-import { useVerificationStore } from "@/stores/verificationStore";
-import { useNavigate } from "react-router-dom";
-import { runDetection } from "@/lib/faceDetetction";
-import copyCurrentUrl from "@/lib/copyCurrentUrl";
-import { getDeviceCapabilities } from "@/lib/cameraUitls";
-import { validateSelfieService } from "@/services/validate.service";
-import { toast } from "react-toastify";
-import { AxiosError } from "axios";
-import { base64ToFile } from "@/lib/imageUtil";
 import buildUrlSessionTokens from "@/lib/buildUrlSessionTokens";
+import { getDeviceCapabilities } from "@/lib/cameraUitls";
+import { runDetection } from "@/lib/faceDetetction";
+import { base64ToFile } from "@/lib/imageUtil";
+import { validateSelfieService } from "@/services/validate.service";
+import { useVerificationStore } from "@/stores/verificationStore";
+import { AxiosError } from "axios";
+import { motion } from "framer-motion";
+import { Camera, Check, RotateCcw, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import Webcam from "react-webcam";
 
 const Selfie = () => {
     const { setStepStatus, getStepStatus } = useVerificationStore();
@@ -42,7 +33,6 @@ const Selfie = () => {
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [isWebcamActive, setIsWebcamActive] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [showQRCode, setShowQRCode] = useState(false);
     const [loaded, setLoaded] = useState(false);
     const [validFace, setValidFace] = useState(false);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
@@ -56,7 +46,6 @@ const Selfie = () => {
         height: number;
     }>({ width: 640, height: 480 });
     const [webcamKey, setWebcamKey] = useState<number>(0);
-    const [copied, setCopied] = useState(false);
 
     // Cleanup detection when component unmounts or camera stops
     useEffect(() => {
@@ -268,103 +257,7 @@ const Selfie = () => {
                     </p>
                 </motion.div>
 
-                {/* Mobile QR Code Section */}
-                <motion.div
-                    className="mb-6"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.1 }}
-                >
-                    <Card className="bg-blue-50 border-blue-200">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <div className="bg-blue-500 text-white p-2 rounded-lg mr-3">
-                                        <Smartphone className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        useVerifica
-                                        <h3 className="font-semibold text-blue-900">
-                                            Use Mobile Device
-                                        </h3>
-                                        <p className="text-sm text-blue-700">
-                                            Better camera experience on mobile
-                                        </p>
-                                    </div>
-                                </div>
-                                <Button
-                                    onClick={() => setShowQRCode(!showQRCode)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                                >
-                                    <QrCode className="w-4 h-4 mr-2" />
-                                    {showQRCode ? "Hide QR" : "Show QR"}
-                                </Button>
-                            </div>
-
-                            <AnimatePresence>
-                                {showQRCode && (
-                                    <motion.div
-                                        className="mt-4 pt-4 border-t border-blue-200"
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: "auto" }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        transition={{ duration: 0.3 }}
-                                    >
-                                        <div className="flex flex-col md:flex-row items-center gap-4">
-                                            <div className="bg-white p-4 rounded-lg border border-blue-200">
-                                                <QRCode
-                                                    value={copyCurrentUrl()}
-                                                    size={128}
-                                                    level="M"
-                                                    className="w-full h-full"
-                                                />
-                                            </div>
-                                            <div className="flex-1 text-center md:text-left">
-                                                <h4 className="font-semibold text-blue-900 mb-2">
-                                                    Scan with Mobile Camera
-                                                </h4>
-                                                <p className="text-sm text-blue-700 mb-3">
-                                                    Open your mobile camera and
-                                                    scan this QR code to take
-                                                    your selfie on your phone.
-                                                </p>
-                                                <div className="flex flex-col sm:flex-row gap-2">
-                                                    <Button
-                                                        onClick={() => {
-                                                            copyCurrentUrl();
-                                                            setCopied(true);
-                                                            setTimeout(() => {
-                                                                setCopied(
-                                                                    false
-                                                                );
-                                                            }, 1000);
-                                                        }}
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                                                    >
-                                                        {/* Show a checkmark if the URL is copied */}
-                                                        {copied ? (
-                                                            <Check className="w-4 h-4 mr-2" />
-                                                        ) : (
-                                                            <CopyIcon className="w-4 h-4 mr-2" />
-                                                        )}
-                                                        Copy Link
-                                                    </Button>
-                                                    <span className="text-xs text-blue-600 self-center">
-                                                        Or share this page URL
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </CardContent>
-                    </Card>
-                </motion.div>
+                <MobileQR />
 
                 {/* Camera/Preview Area */}
                 <motion.div
