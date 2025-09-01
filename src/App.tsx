@@ -1,4 +1,5 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import Home from "./pages/Home";
 import Selfie from "./pages/Selfie";
 import Document from "./pages/Document";
@@ -11,6 +12,12 @@ function App() {
     const { getCompletedCount } = useVerificationStore();
     const completedCount = getCompletedCount();
     const totalSteps = 4;
+    const location = useLocation();
+
+    // Scroll to top on route change
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [location.pathname]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Camera,
@@ -8,6 +8,7 @@ import {
     X,
     Smartphone,
     QrCode,
+    CopyIcon,
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
@@ -17,21 +18,96 @@ import ProgressStepper from "@/components/ProgressStepper";
 import { useVerificationStore } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
 import { runDetection } from "@/lib/faceDetetction";
+import copyCurrentUrl from "@/lib/copyCurrentUrl";
+import { getDeviceCapabilities } from "@/lib/cameraUitls";
 
 const Selfie = () => {
+    const { setStepStatus } = useVerificationStore();
+    const navigate = useNavigate();
+
+    const canvasRef = useRef<HTMLCanvasElement>(null);
     const webcamRef = useRef<Webcam>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [isWebcamActive, setIsWebcamActive] = useState(false);
-    const [facingMode, setFacingMode] = useState<"user" | "environment">(
-        "user"
-    );
     const [isProcessing, setIsProcessing] = useState(false);
     const [showQRCode, setShowQRCode] = useState(false);
     const [loaded, setLoaded] = useState(false);
+    const [validFace, setValidFace] = useState(false);
+    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+    const [selectedDevice, setSelectedDevice] =
+        useState<MediaDeviceInfo | null>(null);
+    const [detectionCleanup, setDetectionCleanup] = useState<
+        (() => void) | null
+    >(null);
+    const [deviceResolution, setDeviceResolution] = useState<{
+        width: number;
+        height: number;
+    }>({ width: 640, height: 480 });
+    const [webcamKey, setWebcamKey] = useState<number>(0);
+    const [copied, setCopied] = useState(false);
+    // Cleanup detection when component unmounts or camera stops
+    useEffect(() => {
+        return () => {
+            if (detectionCleanup) {
+                detectionCleanup();
+            }
+        };
+    }, [detectionCleanup]);
+    useEffect(() => {
+        navigator.mediaDevices.enumerateDevices().then((devices) => {
+            const newDevices = devices.filter(
+                (device) => device.kind === "videoinput"
+            );
+            setDevices(newDevices);
+            if (newDevices.length > 0) {
+                setSelectedDevice(newDevices[0]);
+                getDeviceCapabilities(newDevices[0].deviceId).then(
+                    (resolution) => {
+                        setDeviceResolution(resolution);
+                    }
+                );
+            }
+        });
+    }, []);
+    // Switch to next available camera
+    const switchCamera = async () => {
+        if (devices.length <= 1) return;
 
-    const { setStepStatus } = useVerificationStore();
-    const navigate = useNavigate();
+        const currentIndex = devices.findIndex(
+            (d) => d.deviceId === selectedDevice?.deviceId
+        );
+        const nextIndex = (currentIndex + 1) % devices.length;
+        const nextDevice = devices[nextIndex];
+
+        // Cleanup current detection
+        if (detectionCleanup) {
+            detectionCleanup();
+            setDetectionCleanup(null);
+        }
+
+        setSelectedDevice(nextDevice);
+        setLoaded(false);
+        setValidFace(false);
+
+        // Get capabilities for the new device
+        await getDeviceCapabilities(nextDevice.deviceId);
+
+        // Force webcam remount
+        setWebcamKey((prev) => prev + 1);
+    };
+
+    // Stop camera and cleanup
+    const stopCamera = () => {
+        if (detectionCleanup) {
+            detectionCleanup();
+            setDetectionCleanup(null);
+        }
+        setIsWebcamActive(false);
+        setLoaded(false);
+        setValidFace(false);
+    };
 
     const capture = useCallback(() => {
         const imageSrc = webcamRef.current?.getScreenshot();
@@ -52,11 +128,14 @@ const Selfie = () => {
         }
     };
 
-    const switchCamera = () => {
-        setFacingMode(facingMode === "user" ? "environment" : "user");
-    };
-
     const retakePhoto = () => {
+        // Cleanup current detection
+        if (detectionCleanup) {
+            detectionCleanup();
+            setDetectionCleanup(null);
+        }
+        setLoaded(false);
+        setValidFace(false);
         setCapturedImage(null);
         setIsWebcamActive(true);
     };
@@ -77,39 +156,42 @@ const Selfie = () => {
         // Navigate to next step
         navigate("/document");
     };
-    const inputResolution = {
-        width: 730,
-        height: 640,
-    };
-    const videoConstraints = {
-        width: inputResolution.width,
-        height: inputResolution.height,
-        facingMode: "user",
-    };
-
-    const getCurrentUrl = () => {
-        return window.location.href;
-    };
-
-    const copyUrlToClipboard = async () => {
-        try {
-            await navigator.clipboard.writeText(getCurrentUrl());
-            // You could add a toast notification here
-        } catch (err) {
-            console.error("Failed to copy: ", err);
-        }
-    };
 
     const handleVideoLoad = async (
         videoNode: React.ChangeEvent<HTMLVideoElement>
     ) => {
-        console.log("handleVideoLoad");
         const video = videoNode.target;
         if (video.readyState !== 4) return;
         if (loaded) return;
-        console.log("video loaded");
-        await runDetection(video, () => {});
-        console.log("detection loaded");
+        if (!canvasRef.current) return;
+
+        // Cleanup previous detection if exists
+        if (detectionCleanup) {
+            detectionCleanup();
+        }
+
+        const cleanup = await runDetection(
+            video,
+            canvasRef.current,
+            (ctx, _, isFrontDirected, isCloserToScreen) => {
+                if (!isCloserToScreen) {
+                    // Show a warning message in the canvas
+                    ctx.fillStyle = "red";
+                    ctx.font = "16px Arial";
+                    ctx.fillText("Please move closer to the screen", 10, 30);
+                    return;
+                }
+                if (!isFrontDirected) {
+                    ctx.fillStyle = "red";
+                    ctx.font = "16px Arial";
+                    ctx.fillText("Please face the camera", 10, 30);
+                    return;
+                }
+                setValidFace(true);
+            }
+        );
+
+        setDetectionCleanup(() => cleanup);
         setLoaded(true);
     };
 
@@ -183,7 +265,7 @@ const Selfie = () => {
                                         <div className="flex flex-col md:flex-row items-center gap-4">
                                             <div className="bg-white p-4 rounded-lg border border-blue-200">
                                                 <QRCode
-                                                    value={getCurrentUrl()}
+                                                    value={copyCurrentUrl()}
                                                     size={128}
                                                     level="M"
                                                     className="w-full h-full"
@@ -200,13 +282,25 @@ const Selfie = () => {
                                                 </p>
                                                 <div className="flex flex-col sm:flex-row gap-2">
                                                     <Button
-                                                        onClick={
-                                                            copyUrlToClipboard
-                                                        }
+                                                        onClick={() => {
+                                                            copyCurrentUrl();
+                                                            setCopied(true);
+                                                            setTimeout(() => {
+                                                                setCopied(
+                                                                    false
+                                                                );
+                                                            }, 1000);
+                                                        }}
                                                         variant="outline"
                                                         size="sm"
                                                         className="border-blue-300 text-blue-700 hover:bg-blue-100"
                                                     >
+                                                        {/* Show a checkmark if the URL is copied */}
+                                                        {copied ? (
+                                                            <Check className="w-4 h-4 mr-2" />
+                                                        ) : (
+                                                            <CopyIcon className="w-4 h-4 mr-2" />
+                                                        )}
                                                         Copy Link
                                                     </Button>
                                                     <span className="text-xs text-blue-600 self-center">
@@ -237,7 +331,12 @@ const Selfie = () => {
                                     Loading the face detection model...
                                 </div>
                             )}
-                            <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video">
+                            <div
+                                className="relative bg-gray-900 rounded-lg overflow-hidden"
+                                style={{
+                                    aspectRatio: `${deviceResolution.width}/${deviceResolution.height}`,
+                                }}
+                            >
                                 {capturedImage ? (
                                     // Preview captured image
                                     <div className="relative w-full h-full">
@@ -257,31 +356,31 @@ const Selfie = () => {
                                     // Active webcam
                                     <div className="relative w-full h-full">
                                         <Webcam
-                                            width={inputResolution.width}
-                                            height={inputResolution.height}
+                                            key={webcamKey}
                                             ref={webcamRef}
                                             audio={false}
                                             screenshotFormat="image/jpeg"
-                                            videoConstraints={videoConstraints}
-                                            className="w-full h-full object-cover"
+                                            className="w-full h-full object-cover opacity-0 z-0"
                                             onLoadedData={handleVideoLoad}
+                                            width={deviceResolution.width}
+                                            height={deviceResolution.height}
+                                            videoConstraints={{
+                                                deviceId:
+                                                    selectedDevice?.deviceId,
+                                                facingMode: "user",
+                                            }}
                                         />
-
-                                        {/* Camera overlay */}
-                                        <div className="absolute inset-0 pointer-events-none">
-                                            {/* Face outline guide */}
-                                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                                                <div className="w-48 h-64 border-2 border-white border-dashed rounded-full opacity-50"></div>
-                                            </div>
-
-                                            {/* Instructions */}
-                                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-                                                <div className="bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-sm">
-                                                    Position your face within
-                                                    the oval
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <canvas
+                                            width={deviceResolution.width}
+                                            height={deviceResolution.height}
+                                            ref={canvasRef}
+                                            className="w-full h-full object-cover absolute top-0 left-0 z-10"
+                                            style={{
+                                                width: "100%",
+                                                height: "100%",
+                                                objectFit: "cover",
+                                            }}
+                                        />
                                     </div>
                                 ) : (
                                     // Placeholder when no camera is active
@@ -315,7 +414,10 @@ const Selfie = () => {
                                 <>
                                     {/* Start Camera Button */}
                                     <Button
-                                        onClick={() => setIsWebcamActive(true)}
+                                        onClick={() => {
+                                            setIsWebcamActive(true);
+                                            setValidFace(false);
+                                        }}
                                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3"
                                         size="lg"
                                     >
@@ -325,9 +427,10 @@ const Selfie = () => {
 
                                     {/* Upload Image Button */}
                                     <Button
-                                        onClick={() =>
-                                            fileInputRef.current?.click()
-                                        }
+                                        onClick={() => {
+                                            setValidFace(false);
+                                            fileInputRef.current?.click();
+                                        }}
                                         variant="outline"
                                         className="flex-1 py-3"
                                         size="lg"
@@ -349,8 +452,13 @@ const Selfie = () => {
                                     {/* Capture Button */}
                                     <Button
                                         onClick={capture}
-                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3"
+                                        className={`flex-1 ${
+                                            validFace
+                                                ? "bg-green-600 hover:bg-green-700 text-white"
+                                                : "bg-red-400 text-red-600"
+                                        } py-3`}
                                         size="lg"
+                                        disabled={!validFace}
                                     >
                                         <Camera className="w-5 h-5 mr-2" />
                                         Capture Photo
@@ -362,6 +470,7 @@ const Selfie = () => {
                                         variant="outline"
                                         className="py-3"
                                         size="lg"
+                                        disabled={devices.length <= 1}
                                     >
                                         <RotateCcw className="w-5 h-5 mr-2" />
                                         Switch Camera
@@ -369,7 +478,7 @@ const Selfie = () => {
 
                                     {/* Stop Camera Button */}
                                     <Button
-                                        onClick={() => setIsWebcamActive(false)}
+                                        onClick={stopCamera}
                                         variant="outline"
                                         className="py-3"
                                         size="lg"
