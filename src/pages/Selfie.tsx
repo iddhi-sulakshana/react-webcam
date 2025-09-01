@@ -202,13 +202,13 @@ const Selfie = () => {
 
                 if (!isCloserToScreen) {
                     ctx.fillStyle = "red";
-                    ctx.font = "16px Arial";
+                    ctx.font = "30px Arial";
                     ctx.fillText("Please move closer to the screen", 10, 30);
                     return;
                 }
                 if (!isFrontDirected) {
                     ctx.fillStyle = "red";
-                    ctx.font = "16px Arial";
+                    ctx.font = "30px Arial";
                     ctx.fillText("Please face the camera", 10, 30);
                     return;
                 }
