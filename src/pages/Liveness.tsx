@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Webcam from "react-webcam";
 import ProgressStepper from "@/components/ProgressStepper";
-import { useVerificationStore } from "@/lib/store";
+import { useVerificationStore } from "@/stores/verificationStore";
 import { useNavigate } from "react-router-dom";
 
 type RotationDirection = "left" | "right" | "up" | "down";
@@ -173,7 +173,7 @@ const Liveness = () => {
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
         // Update store status
-        setStepStatus("liveness", "completed");
+        setStepStatus("liveness", "approved");
 
         setIsProcessing(false);
 

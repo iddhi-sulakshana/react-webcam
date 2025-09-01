@@ -1,7 +1,9 @@
 import { CheckCircle, Camera, FileText, Shield, Award } from "lucide-react";
 import { motion } from "framer-motion";
-import { useVerificationStore } from "@/lib/store";
-import type { StepStatus } from "@/lib/store";
+import {
+    useVerificationStore,
+    type StepStatus,
+} from "@/stores/verificationStore";
 
 interface Step {
     id: number;
@@ -45,7 +47,7 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
     const { getStepStatus } = useVerificationStore();
 
     const getStepColor = (stepId: number, status: StepStatus) => {
-        if (status === "completed") {
+        if (status === "approved") {
             return "text-green-600 bg-green-100 border-green-200";
         } else if (stepId === currentStep) {
             return "text-blue-600 bg-blue-100 border-blue-200";
@@ -58,7 +60,7 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
 
     const getConnectorColor = (stepId: number) => {
         const currentStepStatus = getStepStatus(steps[stepId - 1]?.storeKey);
-        if (currentStepStatus === "completed") {
+        if (currentStepStatus === "approved") {
             return "bg-green-400";
         } else if (stepId <= currentStep) {
             return "bg-blue-400";
@@ -68,7 +70,7 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
     };
 
     const getStepIcon = (step: Step, status: StepStatus) => {
-        if (status === "completed") {
+        if (status === "approved") {
             return <CheckCircle className="w-5 h-5" />;
         } else {
             return <step.icon className="w-5 h-5" />;
@@ -122,7 +124,7 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
                                         className={`
                                         text-xs font-medium transition-colors duration-300
                                         ${
-                                            status === "completed"
+                                            status === "approved"
                                                 ? "text-green-600"
                                                 : isActive
                                                 ? "text-blue-600"
@@ -138,7 +140,7 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
                                         className={`
                                         text-xs transition-colors duration-300
                                         ${
-                                            status === "completed"
+                                            status === "approved"
                                                 ? "text-green-500"
                                                 : isActive
                                                 ? "text-blue-500"
@@ -148,7 +150,7 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
                                         }
                                     `}
                                     >
-                                        {status === "completed"
+                                        {status === "approved"
                                             ? "Complete"
                                             : isActive
                                             ? "Current"

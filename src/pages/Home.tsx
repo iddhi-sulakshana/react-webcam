@@ -6,8 +6,8 @@ import documentImg from "../assets/images/document.png";
 import selfieImg from "../assets/images/selfie.png";
 import livenessImg from "../assets/images/liveness.png";
 import completeImg from "../assets/images/complete.png";
-import { useVerificationStore } from "@/lib/store";
-import type { StepStatus } from "@/lib/store";
+import { useVerificationStore } from "@/stores/verificationStore";
+import type { StepStatus } from "@/stores/verificationStore";
 import VerificationButton from "@/components/VerificationButton";
 
 const workflowSteps = [
@@ -94,7 +94,7 @@ export default function Home() {
 
     const getStatusIcon = (status: StepStatus) => {
         switch (status) {
-            case "completed":
+            case "approved":
                 return <CheckCircle className="w-6 h-6 text-green-500" />;
             case "rejected":
                 return <XCircle className="w-6 h-6 text-red-500" />;

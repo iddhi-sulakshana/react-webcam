@@ -19,7 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Webcam from "react-webcam";
 import ProgressStepper from "@/components/ProgressStepper";
-import { useVerificationStore } from "@/lib/store";
+import { useVerificationStore } from "@/stores/verificationStore";
 import { useNavigate } from "react-router-dom";
 
 type DocumentType = "id" | "driver_license" | "passport" | null;
@@ -186,7 +186,7 @@ const Document = () => {
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
         // Update store status
-        setStepStatus("document", "completed");
+        setStepStatus("document", "approved");
 
         setIsProcessing(false);
 

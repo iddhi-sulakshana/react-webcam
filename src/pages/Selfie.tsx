@@ -15,15 +15,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Webcam from "react-webcam";
 import ProgressStepper from "@/components/ProgressStepper";
-import { useVerificationStore } from "@/lib/store";
+import { useVerificationStore } from "@/stores/verificationStore";
 import { useNavigate } from "react-router-dom";
 import { runDetection } from "@/lib/faceDetetction";
 import copyCurrentUrl from "@/lib/copyCurrentUrl";
 import { getDeviceCapabilities } from "@/lib/cameraUitls";
+import { validateSelfieService } from "@/services/validate.service";
+import { toast } from "react-toastify";
+import { AxiosError } from "axios";
+import { base64ToFile } from "@/lib/imageUtil";
+import buildUrlSessionTokens from "@/lib/buildUrlSessionTokens";
 
 const Selfie = () => {
-    const { setStepStatus } = useVerificationStore();
+    const { setStepStatus, getStepStatus } = useVerificationStore();
     const navigate = useNavigate();
+    const urlParams = buildUrlSessionTokens();
+    useEffect(() => {
+        if (getStepStatus("selfie") === "approved") {
+            navigate(`/document/${urlParams}`);
+        }
+    }, [getStepStatus("selfie")]);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const webcamRef = useRef<Webcam>(null);
@@ -47,6 +58,7 @@ const Selfie = () => {
     }>({ width: 640, height: 480 });
     const [webcamKey, setWebcamKey] = useState<number>(0);
     const [copied, setCopied] = useState(false);
+
     // Cleanup detection when component unmounts or camera stops
     useEffect(() => {
         return () => {
@@ -140,21 +152,32 @@ const Selfie = () => {
         setIsWebcamActive(true);
     };
 
+    const handleValidateSelfie = validateSelfieService();
+
     const handleSubmit = async () => {
         if (!capturedImage) return;
 
         setIsProcessing(true);
 
-        // Simulate processing
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        try {
+            // Convert base64 image to proper File object
+            const imageFile = base64ToFile(capturedImage, "selfie.jpg");
 
-        // Update store status
-        setStepStatus("selfie", "completed");
+            await handleValidateSelfie.mutateAsync(imageFile);
 
+            // Update store status
+            setStepStatus("selfie", "approved");
+
+            // Navigate to next step
+            navigate(`/document/${urlParams}`);
+        } catch (error) {
+            if (error instanceof AxiosError) {
+                toast.error(error.response?.data.detail);
+            } else {
+                toast.error("Failed to validate selfie");
+            }
+        }
         setIsProcessing(false);
-
-        // Navigate to next step
-        navigate("/document");
     };
 
     const handleVideoLoad = async (
@@ -566,22 +589,20 @@ const Selfie = () => {
                     <h3 className="font-semibold text-blue-900 mb-3">
                         Tips for a good selfie:
                     </h3>
-                    <ul className="space-y-2 text-sm text-blue-800">
+                    <ul className="space-y-2 text-sm text-blue-800 list-disc list-inside">
                         <li>
-                            • Make sure your face is well-lit and clearly
-                            visible
+                            Make sure your face is well-lit and clearly visible
                         </li>
-                        <li>• Position your face in the center of the frame</li>
+                        <li>Position your face in the center of the frame</li>
                         <li>
-                            • Remove glasses, hats, or anything covering your
-                            face
+                            Remove glasses, hats, or anything covering your face
                         </li>
                         <li>
-                            • Keep a neutral expression and look directly at the
+                            Keep a neutral expression and look directly at the
                             camera
                         </li>
                         <li>
-                            • Ensure the background is plain and not distracting
+                            Ensure the background is plain and not distracting
                         </li>
                     </ul>
                 </motion.div>

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import ProgressStepper from "@/components/ProgressStepper";
 import CompletionModal from "@/components/CompletionModal";
-import { useVerificationStore } from "@/lib/store";
+import { useVerificationStore } from "@/stores/verificationStore";
 
 const Complete = () => {
     const [showModal, setShowModal] = useState(false);
@@ -15,7 +15,7 @@ const Complete = () => {
 
     // Mark complete step as completed when component mounts
     useEffect(() => {
-        setStepStatus("complete", "completed");
+        setStepStatus("complete", "approved");
 
         // Start animation sequence
         const timer = setTimeout(() => {

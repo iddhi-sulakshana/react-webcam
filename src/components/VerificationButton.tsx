@@ -2,9 +2,10 @@ import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useVerificationStore } from "@/lib/store";
+import { useVerificationStore } from "@/stores/verificationStore";
 import { useState } from "react";
 import CompletionModal from "./CompletionModal";
+import buildUrlSessionTokens from "@/lib/buildUrlSessionTokens";
 
 const VerificationButton = () => {
     const { getStepStatus } = useVerificationStore();
@@ -17,18 +18,22 @@ const VerificationButton = () => {
     const navigate = useNavigate();
 
     const onClickContinue = () => {
-        if (completeStatus === "completed") navigate("/");
-        else if (livenessStatus === "completed") navigate("/complete");
-        else if (documentStatus === "completed") navigate("/liveness");
-        else if (selfiStatus === "completed") navigate("/document");
-        else navigate("/selfie");
+        const urlSessionTokens = buildUrlSessionTokens();
+        if (completeStatus === "approved") navigate(`/${urlSessionTokens}`);
+        else if (livenessStatus === "approved")
+            navigate(`/complete/${urlSessionTokens}`);
+        else if (documentStatus === "approved")
+            navigate(`/liveness/${urlSessionTokens}`);
+        else if (selfiStatus === "approved")
+            navigate(`/document/${urlSessionTokens}`);
+        else navigate(`/selfie/${urlSessionTokens}`);
     };
 
     const onClickComplete = () => {
         setShowCompletionModal(true);
     };
 
-    if (completeStatus === "completed")
+    if (completeStatus === "approved")
         return (
             <>
                 <motion.div
@@ -72,7 +77,7 @@ const VerificationButton = () => {
                     size="lg"
                     className="cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-12 py-4 text-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 mb-10"
                 >
-                    {selfiStatus === "completed"
+                    {selfiStatus === "approved"
                         ? "Continue Verification"
                         : "Start Verification"}
                     <ArrowRight className="ml-3 w-6 h-6" />

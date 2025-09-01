@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type StepStatus = "pending" | "completed" | "rejected";
+export type StepStatus = "pending" | "approved" | "rejected";
 
 export interface Step {
     selfie: StepStatus;
@@ -20,6 +20,7 @@ interface VerificationStore {
     getStepStatus: (stepId: keyof Step) => StepStatus;
     getCompletedCount: () => number;
     getRejectedCount: () => number;
+    setSteps: (steps: Step) => void;
 }
 
 const initialSteps: Step = {
@@ -32,6 +33,10 @@ const initialSteps: Step = {
 export const useVerificationStore = create<VerificationStore>((set, get) => ({
     steps: initialSteps,
     currentStep: 1,
+
+    setSteps: (steps: Step) => {
+        set({ steps });
+    },
 
     setStepStatus: (stepId: keyof Step, status: StepStatus) => {
         set((state) => ({
@@ -58,7 +63,7 @@ export const useVerificationStore = create<VerificationStore>((set, get) => ({
     },
 
     getCompletedCount: () => {
-        return Object.values(get().steps).filter((step) => step === "completed")
+        return Object.values(get().steps).filter((step) => step === "approved")
             .length;
     },
 

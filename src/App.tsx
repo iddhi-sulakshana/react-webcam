@@ -1,23 +1,138 @@
-import { Routes, Route, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { Routes, Route, useLocation, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import Home from "./pages/Home";
 import Selfie from "./pages/Selfie";
 import Document from "./pages/Document";
 import Liveness from "./pages/Liveness";
 import Complete from "./pages/Complete";
-import { useVerificationStore } from "@/lib/store";
+import { useVerificationStore, type Step } from "@/stores/verificationStore";
+import { useTokenStore } from "@/stores/tokenStore";
 import { motion } from "framer-motion";
+import {
+    getSessionDetailsService,
+    validateSessionService,
+} from "./services/session.service";
+import { AxiosError } from "axios";
 
 function App() {
-    const { getCompletedCount } = useVerificationStore();
+    const { getCompletedCount, setSteps } = useVerificationStore();
+    const { isAuthenticated, setTokens, clearTokens, setIsAuthenticated } =
+        useTokenStore();
     const completedCount = getCompletedCount();
     const totalSteps = 4;
     const location = useLocation();
+    const [isLoading, setIsLoading] = useState(true);
+    const [searchParams] = useSearchParams();
+    const {
+        data: sessionData,
+        isLoading: isSessionLoading,
+        isError: isSessionError,
+        error: sessionError,
+    } = validateSessionService();
+    const {
+        data: sessionDetailsData,
+        isLoading: isSessionDetailsLoading,
+        isError: isSessionDetailsError,
+        error: sessionDetailsError,
+    } = getSessionDetailsService();
+
+    useEffect(() => {
+        if (isSessionLoading) return;
+        if (isSessionError) {
+            if (sessionError instanceof AxiosError)
+                toast.error(sessionError.response?.data?.detail);
+            handleAuthFailure();
+        } else if (sessionData) {
+            setIsAuthenticated(true);
+
+            setIsLoading(false);
+        }
+    }, [isSessionError, isLoading, sessionData]);
+
+    useEffect(() => {
+        if (isSessionDetailsLoading) return;
+        if (isSessionDetailsError) {
+            if (sessionDetailsError instanceof AxiosError)
+                toast.error(sessionDetailsError.response?.data?.detail);
+            handleAuthFailure();
+        } else if (sessionDetailsData) {
+            const newStep: Step = {
+                selfie: sessionDetailsData.data.verification_result
+                    .selfie_status,
+                document:
+                    sessionDetailsData.data.verification_result.document_status,
+                liveness:
+                    sessionDetailsData.data.verification_result.liveness_status,
+                complete:
+                    sessionDetailsData.data.verification_result.overall_status,
+            };
+            console.log(newStep);
+            setSteps(newStep);
+        }
+    }, [isSessionDetailsError, isSessionDetailsLoading, sessionDetailsData]);
+
+    useEffect(() => {
+        const initializeAuth = async () => {
+            try {
+                const sessionId = searchParams.get("session_id");
+                const sessionToken = searchParams.get("session_token");
+                if (sessionId && sessionToken)
+                    setTokens(sessionId, sessionToken);
+                else throw new Error("No authentication tokens found.");
+            } catch (error) {
+                handleAuthFailure();
+            }
+        };
+
+        initializeAuth();
+    }, []);
+
+    const handleAuthFailure = () => {
+        clearTokens();
+        toast.error(
+            "Authentication required. Please provide valid session tokens."
+        );
+    };
 
     // Scroll to top on route change
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [location.pathname]);
+
+    // Show loading state while checking authentication
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Initializing...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error if not authenticated
+    if (!isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="text-red-500 text-6xl mb-4">🔒</div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                        Authentication Required
+                    </h1>
+                    <p className="text-gray-600 mb-4">
+                        Valid session tokens are required to access this
+                        application.
+                    </p>
+                    <p className="text-sm text-gray-500">
+                        Please close this window and try again with proper
+                        authentication.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
