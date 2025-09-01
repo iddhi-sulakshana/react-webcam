@@ -174,8 +174,33 @@ const Selfie = () => {
             video,
             canvasRef.current,
             (ctx, _, isFrontDirected, isCloserToScreen) => {
+                // Draw oval guide in the center
+                const w = ctx.canvas.width;
+                const h = ctx.canvas.height;
+                const centerX = w / 2;
+                const centerY = h / 2;
+                const radiusX = Math.min(w, h) * 0.32; // horizontal radius (wider)
+                const radiusY = Math.min(w, h) * 0.4; // vertical radius (slightly bigger)
+
+                // Outline color based on validity
+                const isValid = isCloserToScreen && isFrontDirected;
+                ctx.lineWidth = 4;
+                ctx.setLineDash([10, 6]);
+                ctx.strokeStyle = isValid ? "#16a34a" : "#ef4444"; // green-600 or red-500
+                ctx.beginPath();
+                ctx.ellipse(
+                    centerX,
+                    centerY,
+                    radiusX,
+                    radiusY,
+                    0,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.stroke();
+                ctx.setLineDash([]);
+
                 if (!isCloserToScreen) {
-                    // Show a warning message in the canvas
                     ctx.fillStyle = "red";
                     ctx.font = "16px Arial";
                     ctx.fillText("Please move closer to the screen", 10, 30);
@@ -187,6 +212,7 @@ const Selfie = () => {
                     ctx.fillText("Please face the camera", 10, 30);
                     return;
                 }
+
                 setValidFace(true);
             }
         );
@@ -324,19 +350,23 @@ const Selfie = () => {
                 >
                     <Card className="mb-6">
                         <CardContent>
-                            {loaded ? (
-                                <></>
-                            ) : (
-                                <div className="text-center text-gray-300">
-                                    Loading the face detection model...
-                                </div>
-                            )}
                             <div
                                 className="relative bg-gray-900 rounded-lg overflow-hidden"
                                 style={{
                                     aspectRatio: `${deviceResolution.width}/${deviceResolution.height}`,
                                 }}
                             >
+                                {/* Loading overlay */}
+                                {!loaded && isWebcamActive && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-30">
+                                        <div className="text-center text-white">
+                                            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                            <div className="text-sm">
+                                                Loading camera...
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 {capturedImage ? (
                                     // Preview captured image
                                     <div className="relative w-full h-full">
