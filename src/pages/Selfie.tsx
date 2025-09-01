@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Camera,
-    Upload,
     RotateCcw,
     Check,
     X,
@@ -479,7 +478,7 @@ const Selfie = () => {
                                     </Button>
 
                                     {/* Upload Image Button */}
-                                    <Button
+                                    {/* <Button
                                         onClick={() => {
                                             setValidFace(false);
                                             fileInputRef.current?.click();
@@ -490,7 +489,7 @@ const Selfie = () => {
                                     >
                                         <Upload className="w-5 h-5 mr-2" />
                                         Upload Image
-                                    </Button>
+                                    </Button> */}
 
                                     <input
                                         ref={fileInputRef}
