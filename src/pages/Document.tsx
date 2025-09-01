@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Camera,
@@ -21,6 +21,16 @@ import Webcam from "react-webcam";
 import ProgressStepper from "@/components/ProgressStepper";
 import { useVerificationStore } from "@/stores/verificationStore";
 import { useNavigate } from "react-router-dom";
+import idFrontSvg from "@/assets/images/id_front.svg";
+import idBackSvg from "@/assets/images/id_back.svg";
+import {
+    validateIDService,
+    validatePassportService,
+} from "@/services/validate.service";
+import { base64ToFile } from "@/lib/imageUtil";
+import { AxiosError } from "axios";
+import { toast } from "react-toastify";
+import buildUrlSessionTokens from "@/lib/buildUrlSessionTokens";
 
 type DocumentType = "id" | "driver_license" | "passport" | null;
 type CaptureStep = "front" | "back" | "single";
@@ -45,15 +55,26 @@ const Document = () => {
     );
     const [isProcessing, setIsProcessing] = useState(false);
     const [showQRCode, setShowQRCode] = useState(false);
+    const [showIdFrontImage, setShowIdFrontImage] = useState(false);
 
-    const { setStepStatus } = useVerificationStore();
+    const { setStepStatus, getStepStatus } = useVerificationStore();
     const navigate = useNavigate();
+    const urlParams = buildUrlSessionTokens();
+
+    useEffect(() => {
+        if (getStepStatus("selfie") !== "approved") {
+            navigate(`/selfie/${urlParams}`);
+        }
+        if (getStepStatus("document") === "approved") {
+            navigate(`/liveness/${urlParams}`);
+        }
+    }, [getStepStatus("selfie"), getStepStatus("document")]);
 
     const documentTypes = [
         {
             type: "id" as DocumentType,
             title: "National ID Card",
-            description: "Government-issued identification card",
+            description: "Government-issued ID card",
             icon: CreditCard,
             requiredSides: ["front", "back"],
             color: "from-blue-500 to-blue-600",
@@ -120,29 +141,55 @@ const Document = () => {
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
+
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
+                const imageData = e.target?.result as string;
+
                 setCapturedImages((prev) => ({
                     ...prev,
-                    [currentCaptureStep]: e.target?.result as string,
+                    [currentCaptureStep]: imageData,
                 }));
 
                 // Move to next step if needed
-                const requiredImages = getRequiredImages();
-                const currentIndex = requiredImages.indexOf(currentCaptureStep);
-                if (currentIndex < requiredImages.length - 1) {
-                    setCurrentCaptureStep(
-                        requiredImages[currentIndex + 1] as CaptureStep
-                    );
-                }
+                setTimeout(() => {
+                    const requiredImages = getRequiredImages();
+                    const currentIndex =
+                        requiredImages.indexOf(currentCaptureStep);
+
+                    if (currentIndex < requiredImages.length - 1) {
+                        setCurrentCaptureStep(
+                            requiredImages[currentIndex + 1] as CaptureStep
+                        );
+                    }
+                }, 100);
             };
+
+            reader.onerror = (error) => {
+                console.error("Error reading file:", error);
+            };
+
             reader.readAsDataURL(file);
         }
+
+        // Reset the input value to allow selecting the same file again
+        event.target.value = "";
     };
 
     const switchCamera = () => {
         setFacingMode(facingMode === "user" ? "environment" : "user");
+    };
+
+    const handleStartCamera = () => {
+        // Show the ID front image for 1 second
+        setShowIdFrontImage(true);
+        setIsWebcamActive(true);
+
+        // Hide the image after 2 seconds, but keep it in DOM for animation
+        setTimeout(() => {
+            setShowIdFrontImage(false);
+        }, 1000);
     };
 
     const retakeCurrentPhoto = () => {
@@ -177,21 +224,51 @@ const Document = () => {
         );
     };
 
+    const handlePassportValidation = validatePassportService();
+    const handleIDValidation = validateIDService();
     const handleSubmit = async () => {
         if (!isAllImagesCaptures()) return;
 
         setIsProcessing(true);
 
-        // Simulate processing
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        try {
+            // Simulate processing
+            if (selectedDocumentType === "passport") {
+                const imageFile = base64ToFile(
+                    capturedImages.single!,
+                    "passport.jpg"
+                );
+                await handlePassportValidation.mutateAsync(imageFile);
+            } else {
+                const frontImageFile = base64ToFile(
+                    capturedImages.front!,
+                    "front.jpg"
+                );
+                const backImageFile = base64ToFile(
+                    capturedImages.back!,
+                    "back.jpg"
+                );
+                await handleIDValidation.mutateAsync({
+                    front: frontImageFile,
+                    back: backImageFile,
+                });
+            }
 
-        // Update store status
-        setStepStatus("document", "approved");
+            // Update store status
+            setStepStatus("document", "approved");
 
+            // Navigate to next step
+            navigate(`/liveness/${urlParams}`);
+        } catch (error) {
+            if (error instanceof AxiosError) {
+                if (error.response?.data.detail)
+                    toast.error(error.response?.data.detail);
+                else toast.error("Failed to validate document");
+            } else {
+                toast.error("Failed to validate passport");
+            }
+        }
         setIsProcessing(false);
-
-        // Navigate to next step
-        navigate("/liveness");
     };
 
     const resetDocumentSelection = () => {
@@ -199,6 +276,19 @@ const Document = () => {
         setCapturedImages({});
         setCurrentCaptureStep("front");
         setIsWebcamActive(false);
+    };
+
+    // Set the correct initial step when document type is selected
+    const handleDocumentTypeSelection = (docType: DocumentType) => {
+        setSelectedDocumentType(docType);
+        setCapturedImages({});
+        setIsWebcamActive(false);
+
+        // Set the correct initial step based on document type
+        const config = documentTypes.find((doc) => doc.type === docType);
+        if (config) {
+            setCurrentCaptureStep(config.requiredSides[0] as CaptureStep);
+        }
     };
 
     const videoConstraints = {
@@ -264,7 +354,7 @@ const Document = () => {
                                     <Card
                                         className="cursor-pointer hover:shadow-xl transition-all duration-300 border-2 hover:border-blue-300"
                                         onClick={() =>
-                                            setSelectedDocumentType(
+                                            handleDocumentTypeSelection(
                                                 docType.type
                                             )
                                         }
@@ -312,7 +402,7 @@ const Document = () => {
         <div className="container mx-auto px-4 py-8">
             <ProgressStepper currentStep={2} />
 
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto relative">
                 {/* Header */}
                 <motion.div
                     className="text-center mb-6"
@@ -426,7 +516,7 @@ const Document = () => {
                     </Card>
                 </motion.div>
 
-                {/* Progress for multi-step documents */}
+                {/* Progress and Preview for multi-step documents */}
                 {config.requiredSides.length > 1 && (
                     <motion.div
                         className="mb-6"
@@ -443,7 +533,7 @@ const Document = () => {
                                 {totalSteps} completed
                             </span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
                             <motion.div
                                 className="bg-blue-600 h-2 rounded-full"
                                 initial={{ width: 0 }}
@@ -456,6 +546,65 @@ const Document = () => {
                                 }}
                                 transition={{ duration: 0.5 }}
                             />
+                        </div>
+
+                        {/* Preview of captured images */}
+                        <div className="grid grid-cols-2 gap-4 sm:px-36">
+                            {config.requiredSides.map((side) => {
+                                const image =
+                                    capturedImages[
+                                        side as keyof CapturedImages
+                                    ];
+                                const isCurrentStep =
+                                    currentCaptureStep === side;
+
+                                return (
+                                    <div
+                                        key={side}
+                                        className={`relative bg-gray-100 rounded-lg overflow-hidden aspect-[4/3] border-2 ${
+                                            isCurrentStep
+                                                ? "border-blue-500"
+                                                : image
+                                                ? "border-green-500"
+                                                : "border-gray-300"
+                                        }`}
+                                    >
+                                        {image ? (
+                                            <div className="relative w-full h-full">
+                                                <img
+                                                    src={image}
+                                                    alt={`${config.title} - ${side}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute top-2 right-2">
+                                                    <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
+                                                        <Check className="w-3 h-3 mr-1" />
+                                                        {side === "front"
+                                                            ? "Front"
+                                                            : "Back"}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center w-full h-full bg-gray-200">
+                                                <div className="text-center text-gray-500">
+                                                    <Camera className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                    <p className="text-sm font-medium">
+                                                        {side === "front"
+                                                            ? "Front Side"
+                                                            : "Back Side"}
+                                                    </p>
+                                                    <p className="text-xs">
+                                                        {isCurrentStep
+                                                            ? "Current"
+                                                            : "Pending"}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </motion.div>
                 )}
@@ -497,8 +646,62 @@ const Document = () => {
 
                                         {/* Document frame overlay */}
                                         <div className="absolute inset-0 pointer-events-none">
-                                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                                                <div className="w-72 h-44 border-2 border-white border-dashed rounded-lg opacity-70"></div>
+                                            <AnimatePresence mode="wait">
+                                                {showIdFrontImage && (
+                                                    <motion.div
+                                                        initial={{
+                                                            opacity: 0,
+                                                            scale: 0.8,
+                                                        }}
+                                                        animate={{
+                                                            opacity: 1,
+                                                            scale: 1,
+                                                            rotateY:
+                                                                currentCaptureStep ===
+                                                                "back"
+                                                                    ? 180
+                                                                    : 0,
+                                                        }}
+                                                        exit={{
+                                                            opacity: 0,
+                                                            scale: 0.8,
+                                                        }}
+                                                        transition={{
+                                                            duration: 0.8,
+                                                            ease: "easeInOut",
+                                                        }}
+                                                        className="flex items-center justify-center w-full h-full"
+                                                        style={{
+                                                            perspective:
+                                                                "1000px",
+                                                        }}
+                                                    >
+                                                        <motion.div
+                                                            style={{
+                                                                transformStyle:
+                                                                    "preserve-3d",
+                                                            }}
+                                                            className="w-1/2 h-1/2"
+                                                        >
+                                                            <img
+                                                                src={
+                                                                    currentCaptureStep ===
+                                                                        "front" ||
+                                                                    currentCaptureStep ===
+                                                                        "single"
+                                                                        ? idFrontSvg
+                                                                        : idBackSvg
+                                                                }
+                                                                alt="ID Front Example"
+                                                                className="w-full h-full object-contain"
+                                                            />
+                                                        </motion.div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+
+                                            <div className="absolute top-0 left-0 flex items-center justify-center w-full h-full">
+                                                <div className="w-2/3 aspect-video border-2 border-white border-dashed rounded-lg opacity-70"></div>
                                             </div>
 
                                             {/* Instructions */}
@@ -545,7 +748,7 @@ const Document = () => {
                                 <>
                                     {/* Start Camera Button */}
                                     <Button
-                                        onClick={() => setIsWebcamActive(true)}
+                                        onClick={handleStartCamera}
                                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3"
                                         size="lg"
                                     >
@@ -572,6 +775,8 @@ const Document = () => {
                                         accept="image/*"
                                         onChange={handleFileUpload}
                                         className="hidden"
+                                        capture="environment"
+                                        multiple={false}
                                     />
                                 </>
                             ) : (
@@ -633,7 +838,7 @@ const Document = () => {
                                     ) : (
                                         <>
                                             <Check className="w-5 h-5 mr-2" />
-                                            Continue to Next Step
+                                            Validate Document
                                         </>
                                     )}
                                 </Button>
@@ -698,15 +903,14 @@ const Document = () => {
                     <h3 className="font-semibold text-blue-900 mb-3">
                         Tips for document capture:
                     </h3>
-                    <ul className="space-y-2 text-sm text-blue-800">
-                        <li>• Ensure good lighting and avoid shadows</li>
-                        <li>• Keep the document flat and within the frame</li>
-                        <li>• Make sure all text is clear and readable</li>
-                        <li>• Avoid glare or reflections on the document</li>
+                    <ul className="space-y-2 text-sm text-blue-800 list-disc list-inside">
+                        <li>Ensure good lighting and avoid shadows</li>
+                        <li>Keep the document flat and within the frame</li>
+                        <li>Make sure all text is clear and readable</li>
+                        <li>Avoid glare or reflections on the document</li>
                         {config.requiredSides.length > 1 && (
                             <li>
-                                • You'll need to capture both front and back
-                                sides
+                                You'll need to capture both front and back sides
                             </li>
                         )}
                     </ul>

@@ -58,17 +58,6 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
         }
     };
 
-    const getConnectorColor = (stepId: number) => {
-        const currentStepStatus = getStepStatus(steps[stepId - 1]?.storeKey);
-        if (currentStepStatus === "approved") {
-            return "bg-green-400";
-        } else if (stepId <= currentStep) {
-            return "bg-blue-400";
-        } else {
-            return "bg-gray-300";
-        }
-    };
-
     const getStepIcon = (step: Step, status: StepStatus) => {
         if (status === "approved") {
             return <CheckCircle className="w-5 h-5" />;
@@ -78,14 +67,14 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
     };
 
     return (
-        <div className="w-full max-w-4xl mx-auto px-4 py-6">
-            <div className="flex items-center justify-between">
+        <div className="w-full max-w-4xl mx-auto px-4 py-6 relative">
+            <div className="flex items-center justify-between w-full">
                 {steps.map((step, index) => {
                     const status = getStepStatus(step.storeKey);
                     const isActive = step.id === currentStep;
 
                     return (
-                        <div key={step.id} className="flex items-center flex-1">
+                        <div key={step.id} className="flex items-center">
                             {/* Step Circle */}
                             <motion.div
                                 className="flex flex-col items-center"
@@ -160,42 +149,6 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
                                     </p>
                                 </div>
                             </motion.div>
-
-                            {/* Connector Line */}
-                            {index < steps.length - 1 && (
-                                <motion.div
-                                    className="flex-1 h-1 mx-4 rounded-full transition-all duration-500"
-                                    style={{
-                                        background: `linear-gradient(to right, ${
-                                            getConnectorColor(step.id).includes(
-                                                "green"
-                                            )
-                                                ? "#22c55e"
-                                                : getConnectorColor(
-                                                      step.id
-                                                  ).includes("blue")
-                                                ? "#3b82f6"
-                                                : "#d1d5db"
-                                        }, ${
-                                            getConnectorColor(
-                                                step.id + 1
-                                            ).includes("green")
-                                                ? "#22c55e"
-                                                : getConnectorColor(
-                                                      step.id + 1
-                                                  ).includes("blue")
-                                                ? "#3b82f6"
-                                                : "#d1d5db"
-                                        })`,
-                                    }}
-                                    initial={{ scaleX: 0 }}
-                                    animate={{ scaleX: 1 }}
-                                    transition={{
-                                        duration: 0.5,
-                                        delay: (index + 1) * 0.1,
-                                    }}
-                                />
-                            )}
                         </div>
                     );
                 })}

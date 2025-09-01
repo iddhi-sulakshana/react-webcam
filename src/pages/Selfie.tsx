@@ -171,7 +171,9 @@ const Selfie = () => {
             navigate(`/document/${urlParams}`);
         } catch (error) {
             if (error instanceof AxiosError) {
-                toast.error(error.response?.data.detail);
+                if (error.response?.data.detail)
+                    toast.error(error.response?.data.detail);
+                else toast.error("Failed to validate selfie");
             } else {
                 toast.error("Failed to validate selfie");
             }
@@ -558,7 +560,7 @@ const Selfie = () => {
                                 ) : (
                                     <>
                                         <Check className="w-5 h-5 mr-2" />
-                                        Continue
+                                        Validate Selfie
                                     </>
                                 )}
                             </Button>

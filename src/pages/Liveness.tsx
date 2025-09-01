@@ -20,6 +20,7 @@ import Webcam from "react-webcam";
 import ProgressStepper from "@/components/ProgressStepper";
 import { useVerificationStore } from "@/stores/verificationStore";
 import { useNavigate } from "react-router-dom";
+import buildUrlSessionTokens from "@/lib/buildUrlSessionTokens";
 
 type RotationDirection = "left" | "right" | "up" | "down";
 
@@ -49,8 +50,19 @@ const Liveness = () => {
     const [timer, setTimer] = useState(0);
     const [showQRCode, setShowQRCode] = useState(false);
 
-    const { setStepStatus } = useVerificationStore();
+    const { setStepStatus, getStepStatus } = useVerificationStore();
     const navigate = useNavigate();
+
+    const urlParams = buildUrlSessionTokens();
+
+    useEffect(() => {
+        if (getStepStatus("document") !== "approved") {
+            navigate(`/document/${urlParams}`);
+        }
+        if (getStepStatus("liveness") === "approved") {
+            navigate(`/complete/${urlParams}`);
+        }
+    }, [getStepStatus("liveness"), getStepStatus("document")]);
 
     const rotationInstructions = {
         left: {

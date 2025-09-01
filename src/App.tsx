@@ -40,6 +40,7 @@ function App() {
     useEffect(() => {
         if (isSessionLoading) return;
         if (isSessionError) {
+            setIsLoading(false);
             if (sessionError instanceof AxiosError)
                 toast.error(sessionError.response?.data?.detail);
             handleAuthFailure();
