@@ -4,6 +4,8 @@ import "@mediapipe/face_mesh";
 import * as faceLandmarksDetection from "@tensorflow-models/face-landmarks-detection";
 import { drawMesh } from "./drawMesh";
 
+type FaceDirection = "front" | "left" | "right" | "up" | null;
+
 export const runDetection = async (
     video: HTMLVideoElement,
     canvas: HTMLCanvasElement,
@@ -16,7 +18,8 @@ export const runDetection = async (
             xDistance: number;
         },
         isFrontDirected: boolean,
-        isCloserToScreen: boolean
+        isCloserToScreen: boolean,
+        faceDirection: FaceDirection
     ) => void
 ) => {
     const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
@@ -61,19 +64,27 @@ export const runDetection = async (
                     // Then draw the mesh overlay
                     const angle = drawMesh(faces[0], ctx);
                     if (angle) {
+                        const faceDirection = getFaceDirection(angle);
                         const isCloserToScreen = isFaceCloserToScreen(angle);
                         if (isCloserToScreen) {
                             const isFrontDirected = isFaceFrontDirected(angle);
-                            cb(ctx, angle, isFrontDirected, isCloserToScreen);
+                            cb(
+                                ctx,
+                                angle,
+                                isFrontDirected,
+                                isCloserToScreen,
+                                faceDirection
+                            );
                         } else {
-                            cb(ctx, angle, false, false);
+                            cb(ctx, angle, false, false, faceDirection);
                         }
                     } else {
                         cb(
                             ctx,
                             { yaw: 0, turn: 0, zDistance: 0, xDistance: 0 },
                             false,
-                            false
+                            false,
+                            null
                         );
                     }
                 });
@@ -134,4 +145,90 @@ const isFaceCloserToScreen = (angle: {
     const isXClose = angle.xDistance >= xDistanceThreshold;
 
     return isZClose && isXClose;
+};
+
+// Helper function to determine if face is left directed
+const isFaceLeftDirected = (angle: {
+    yaw: number;
+    turn: number;
+    zDistance: number;
+    xDistance: number;
+}) => {
+    // Based on your actual values:
+    // Left: yaw ~105°, turn ~152°
+    // Right: yaw ~134°, turn ~40°
+    // Lower yaw = left, higher yaw = right
+
+    // Set threshold between your left (~105°) and right (~134°) values
+    const yawThreshold = 120; // Midpoint between 105 and 134
+    const isYawLeft = angle.yaw < yawThreshold;
+
+    // For turn, your left value is ~152°, right is ~40°
+    // We can use turn as additional validation or ignore it for now
+    const turnThreshold = 100; // Midpoint between 152 and 40
+    const isTurnLeft = angle.turn > turnThreshold;
+
+    // You can use both yaw and turn for more accuracy
+    return isYawLeft && isTurnLeft;
+};
+// Helper function to determine if face is right directed
+const isFaceRightDirected = (angle: {
+    yaw: number;
+    turn: number;
+    zDistance: number;
+    xDistance: number;
+}) => {
+    // Based on your actual values:
+    // Left: yaw ~105°, turn ~152°
+    // Right: yaw ~134°, turn ~40°
+    // Higher yaw = right, lower yaw = left
+
+    // Set threshold between your left (~105°) and right (~134°) values
+    const yawThreshold = 100; // Midpoint between 105 and 134
+    const isYawRight = angle.yaw > yawThreshold;
+
+    // For turn, your right value is ~40°, left is ~152°
+    const turnThreshold = 40; // Midpoint between 152 and 40
+    const isTurnRight = angle.turn < turnThreshold;
+
+    // You can use both yaw and turn for more accuracy
+    return isYawRight && isTurnRight;
+};
+// Helper function to determine if face is up directed
+const isFaceUpDirected = (angle: {
+    yaw: number;
+    turn: number;
+    zDistance: number;
+    xDistance: number;
+}) => {
+    // Based on your actual values:
+    // Up: yaw ~5-10°
+    // Your left/right range: yaw ~105-134°
+    // Down: yaw ~165-170°
+
+    const yawThreshold = 65; // Well below your left/right range
+    const isYawUp = angle.yaw < yawThreshold;
+
+    return isYawUp;
+};
+
+const getFaceDirection = (angle: {
+    yaw: number;
+    turn: number;
+    zDistance: number;
+    xDistance: number;
+}): FaceDirection => {
+    if (isFaceLeftDirected(angle)) {
+        return "left";
+    }
+    if (isFaceRightDirected(angle)) {
+        return "right";
+    }
+    if (isFaceUpDirected(angle)) {
+        return "up";
+    }
+    if (isFaceFrontDirected(angle)) {
+        return "front";
+    }
+    return null;
 };

@@ -322,11 +322,6 @@ const Selfie = () => {
                                             height={deviceResolution.height}
                                             ref={canvasRef}
                                             className="w-full h-full object-cover absolute top-0 left-0 z-10"
-                                            style={{
-                                                width: "100%",
-                                                height: "100%",
-                                                objectFit: "cover",
-                                            }}
                                         />
                                     </div>
                                 ) : (

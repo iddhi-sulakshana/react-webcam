@@ -1,5 +1,6 @@
 import {
     validateID,
+    validateLiveness,
     validatePassport,
     validateSelfie,
 } from "@/api/validate.api";
@@ -43,3 +44,25 @@ export function validateIDService() {
     });
     return mutation;
 }
+
+export const validateLivenessService = () => {
+    const queryClient = useQueryClient();
+    const sessionId = useTokenStore.getState().sessionId;
+    const mutation = useMutation({
+        mutationFn: ({
+            front,
+            left,
+            right,
+            up,
+        }: {
+            front: File;
+            left: File;
+            right: File;
+            up: File;
+        }) => validateLiveness(sessionId!, front, left, right, up),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["sessionDetails"] });
+        },
+    });
+    return mutation;
+};

@@ -7,23 +7,42 @@ import { Badge } from "@/components/ui/badge";
 import ProgressStepper from "@/components/ProgressStepper";
 import CompletionModal from "@/components/CompletionModal";
 import { useVerificationStore } from "@/stores/verificationStore";
+import buildUrlSessionTokens from "@/lib/buildUrlSessionTokens";
+import { useNavigate } from "react-router-dom";
 
 const Complete = () => {
     const [showModal, setShowModal] = useState(false);
     const [isAnimationComplete, setIsAnimationComplete] = useState(false);
-    const { setStepStatus, getStepStatus } = useVerificationStore();
+    const { getStepStatus } = useVerificationStore();
 
     // Mark complete step as completed when component mounts
     useEffect(() => {
-        setStepStatus("complete", "approved");
-
         // Start animation sequence
         const timer = setTimeout(() => {
             setIsAnimationComplete(true);
         }, 2000);
 
         return () => clearTimeout(timer);
-    }, [setStepStatus]);
+    }, []);
+
+    const navigate = useNavigate();
+    const urlParams = buildUrlSessionTokens();
+
+    useEffect(() => {
+        if (getStepStatus("selfie") !== "approved") {
+            navigate(`/selfie/${urlParams}`);
+        }
+        if (getStepStatus("document") !== "approved") {
+            navigate(`/document/${urlParams}`);
+        }
+        if (getStepStatus("liveness") !== "approved") {
+            navigate(`/liveness/${urlParams}`);
+        }
+    }, [
+        getStepStatus("selfie"),
+        getStepStatus("document"),
+        getStepStatus("liveness"),
+    ]);
 
     const completedSteps = [
         {
