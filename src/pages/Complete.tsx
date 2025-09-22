@@ -32,7 +32,10 @@ const Complete = () => {
         if (getStepStatus("selfie") !== "approved") {
             navigate(`/selfie/${urlParams}`);
         }
-        if (getStepStatus("document") !== "approved") {
+        if (
+            getStepStatus("document") !== "approved" &&
+            getStepStatus("document") !== "manual_review"
+        ) {
             navigate(`/document/${urlParams}`);
         }
         if (getStepStatus("liveness") !== "approved") {
@@ -73,6 +76,7 @@ const Complete = () => {
         setShowModal(false);
     };
 
+    const completeStatus = getStepStatus("complete");
     return (
         <div className="container mx-auto px-4 py-8">
             <ProgressStepper currentStep={4} />
@@ -90,60 +94,118 @@ const Complete = () => {
                         className="relative inline-flex items-center justify-center mb-6"
                         initial={{ scale: 0, rotate: -180 }}
                         animate={{ scale: 1, rotate: 0 }}
-                        transition={{ duration: 1, type: "spring", delay: 0.3 }}
+                        transition={{
+                            duration: 1,
+                            type: "spring",
+                            delay: 0.3,
+                        }}
                     >
-                        {/* Background Glow */}
-                        <motion.div
-                            className="absolute inset-0 bg-green-400 rounded-full blur-xl opacity-30"
-                            animate={{
-                                scale: [1, 1.2, 1],
-                                opacity: [0.3, 0.5, 0.3],
-                            }}
-                            transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                            }}
-                        />
+                        {completeStatus === "manual_review" && (
+                            <>
+                                {/* Background Glow */}
+                                <motion.div
+                                    className="absolute inset-0 bg-yellow-400 rounded-full blur-xl opacity-30"
+                                    animate={{
+                                        scale: [1, 1.2, 1],
+                                        opacity: [0.3, 0.5, 0.3],
+                                    }}
+                                    transition={{
+                                        duration: 2,
+                                        repeat: Infinity,
+                                        ease: "easeInOut",
+                                    }}
+                                />
+                                {/* Main Success Circle */}
+                                <div className="relative bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full p-8 shadow-2xl">
+                                    <Shield className="w-24 h-24 text-white" />
+                                </div>
+                                {/* Floating Sparkles */}
+                                {[...Array(6)].map((_, i) => (
+                                    <motion.div
+                                        key={i}
+                                        className="absolute"
+                                        style={{
+                                            top: `${Math.random() * 100}%`,
+                                            left: `${Math.random() * 100}%`,
+                                        }}
+                                        animate={{
+                                            y: [-20, -40, -20],
+                                            opacity: [0, 1, 0],
+                                            scale: [0.8, 1.2, 0.8],
+                                        }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            delay: i * 0.3,
+                                        }}
+                                    >
+                                        <Sparkles className="w-4 h-4 text-yellow-400" />
+                                    </motion.div>
+                                ))}
+                            </>
+                        )}
+                        {completeStatus === "approved" && (
+                            <>
+                                {/* Background Glow */}
+                                <motion.div
+                                    className="absolute inset-0 bg-green-400 rounded-full blur-xl opacity-30"
+                                    animate={{
+                                        scale: [1, 1.2, 1],
+                                        opacity: [0.3, 0.5, 0.3],
+                                    }}
+                                    transition={{
+                                        duration: 2,
+                                        repeat: Infinity,
+                                        ease: "easeInOut",
+                                    }}
+                                />
 
-                        {/* Main Success Circle */}
-                        <div className="relative bg-gradient-to-br from-green-500 to-green-600 rounded-full p-8 shadow-2xl">
-                            <CheckCircle className="w-24 h-24 text-white" />
-                        </div>
+                                {/* Main Success Circle */}
+                                <div className="relative bg-gradient-to-br from-green-500 to-green-600 rounded-full p-8 shadow-2xl">
+                                    <CheckCircle className="w-24 h-24 text-white" />
+                                </div>
 
-                        {/* Floating Sparkles */}
-                        {[...Array(6)].map((_, i) => (
-                            <motion.div
-                                key={i}
-                                className="absolute"
-                                style={{
-                                    top: `${Math.random() * 100}%`,
-                                    left: `${Math.random() * 100}%`,
-                                }}
-                                animate={{
-                                    y: [-20, -40, -20],
-                                    opacity: [0, 1, 0],
-                                    scale: [0.8, 1.2, 0.8],
-                                }}
-                                transition={{
-                                    duration: 2,
-                                    repeat: Infinity,
-                                    delay: i * 0.3,
-                                }}
-                            >
-                                <Sparkles className="w-4 h-4 text-green-400" />
-                            </motion.div>
-                        ))}
+                                {/* Floating Sparkles */}
+                                {[...Array(6)].map((_, i) => (
+                                    <motion.div
+                                        key={i}
+                                        className="absolute"
+                                        style={{
+                                            top: `${Math.random() * 100}%`,
+                                            left: `${Math.random() * 100}%`,
+                                        }}
+                                        animate={{
+                                            y: [-20, -40, -20],
+                                            opacity: [0, 1, 0],
+                                            scale: [0.8, 1.2, 0.8],
+                                        }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            delay: i * 0.3,
+                                        }}
+                                    >
+                                        <Sparkles className="w-4 h-4 text-green-400" />
+                                    </motion.div>
+                                ))}
+                            </>
+                        )}
                     </motion.div>
 
                     {/* Success Title */}
                     <motion.h1
-                        className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-600 to-green-500 bg-clip-text text-transparent mb-4"
+                        className={`pb-5 text-4xl md:text-5xl font-bold bg-gradient-to-r ${
+                            completeStatus === "manual_review"
+                                ? "from-yellow-600 to-yellow-500"
+                                : "from-green-600 to-green-500"
+                        } bg-clip-text text-transparent mb-4`}
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.5 }}
                     >
-                        Verification Complete!
+                        {completeStatus === "manual_review"
+                            ? "Waiting for Manual Review"
+                            : "Verification Complete!"}
                     </motion.h1>
 
                     {/* Success Subtitle */}
@@ -153,7 +215,9 @@ const Complete = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.7 }}
                     >
-                        Your identity has been successfully verified
+                        {completeStatus === "manual_review"
+                            ? "Waiting for Manual Review"
+                            : "Your identity has been successfully verified"}
                     </motion.p>
 
                     {/* Success Badge */}
@@ -162,9 +226,17 @@ const Complete = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.6, delay: 0.9 }}
                     >
-                        <Badge className="bg-green-100 text-green-800 px-6 py-2 text-lg font-semibold border-green-200">
+                        <Badge
+                            className={`bg-green-100 text-green-800 px-6 py-2 text-lg font-semibold border-green-200 ${
+                                completeStatus === "manual_review"
+                                    ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+                                    : ""
+                            }`}
+                        >
                             <Star className="w-5 h-5 mr-2" />
-                            Verification Successful
+                            {completeStatus === "manual_review"
+                                ? "Waiting for Manual Review"
+                                : "Verification Successful"}
                         </Badge>
                     </motion.div>
                 </motion.div>
@@ -176,7 +248,7 @@ const Complete = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 1.1 }}
                 >
-                    <Card className="bg-green-50 border-green-200 shadow-lg">
+                    <Card className={`bg-white border-gray-200 shadow-lg`}>
                         <CardContent className="p-6">
                             <h2 className="text-2xl font-bold text-green-900 mb-6 text-center">
                                 Verification Summary
@@ -188,7 +260,11 @@ const Complete = () => {
                                     return (
                                         <motion.div
                                             key={step.title}
-                                            className="flex items-center p-4 bg-white rounded-lg border border-green-200"
+                                            className={`flex items-center p-4 bg-white rounded-lg border border-green-200 ${
+                                                step.status === "manual_review"
+                                                    ? "bg-yellow-50 border-yellow-200"
+                                                    : ""
+                                            }`}
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{
@@ -196,7 +272,14 @@ const Complete = () => {
                                                 delay: 1.3 + index * 0.2,
                                             }}
                                         >
-                                            <div className="bg-green-500 text-white p-3 rounded-full mr-4">
+                                            <div
+                                                className={`bg-green-500 text-white p-3 rounded-full mr-4 ${
+                                                    step.status ===
+                                                    "manual_review"
+                                                        ? "bg-yellow-500"
+                                                        : ""
+                                                }`}
+                                            >
                                                 <IconComponent className="w-6 h-6" />
                                             </div>
                                             <div className="flex-1">
@@ -215,7 +298,14 @@ const Complete = () => {
                                                     delay: 1.5 + index * 0.2,
                                                 }}
                                             >
-                                                <CheckCircle className="w-8 h-8 text-green-500" />
+                                                <CheckCircle
+                                                    className={`w-8 h-8 text-green-500 ${
+                                                        step.status ===
+                                                        "manual_review"
+                                                            ? "text-yellow-500"
+                                                            : ""
+                                                    }`}
+                                                />
                                             </motion.div>
                                         </motion.div>
                                     );
@@ -232,7 +322,7 @@ const Complete = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 1.9 }}
                 >
-                    <Card className="bg-blue-50 border-blue-200">
+                    <Card className={`bg-white border-gray-200 `}>
                         <CardContent className="p-6 text-center">
                             <div className="bg-blue-500 text-white p-4 rounded-full inline-flex mb-4">
                                 <Award className="w-8 h-8" />
@@ -245,7 +335,13 @@ const Complete = () => {
                                 submitted for review. You will be redirected to
                                 complete the process.
                             </p>
-                            <div className="flex items-center justify-center space-x-2 text-sm text-blue-600">
+                            <div
+                                className={`flex items-center justify-center space-x-2 text-sm text-blue-600 ${
+                                    completeStatus === "manual_review"
+                                        ? "text-yellow-600"
+                                        : ""
+                                }`}
+                            >
                                 <CheckCircle className="w-4 h-4" />
                                 <span>Secure and encrypted verification</span>
                             </div>
@@ -268,7 +364,11 @@ const Complete = () => {
                         >
                             <Button
                                 onClick={handleFinishVerification}
-                                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-12 py-4 text-xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300"
+                                className={`bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-12 py-4 text-xl font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 ${
+                                    completeStatus === "manual_review"
+                                        ? "from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800"
+                                        : ""
+                                }`}
                                 size="lg"
                             >
                                 <CheckCircle className="w-6 h-6 mr-3" />
@@ -293,10 +393,14 @@ const Complete = () => {
                         },
                         {
                             label: "Verification Status",
-                            value: "Success",
+                            value: completeStatus,
                             icon: Shield,
                         },
-                        { label: "Security Level", value: "High", icon: Award },
+                        {
+                            label: "Security Level",
+                            value: completeStatus,
+                            icon: Award,
+                        },
                     ].map((stat, index) => {
                         const IconComponent = stat.icon;
                         return (
@@ -311,7 +415,13 @@ const Complete = () => {
                                 }}
                                 whileHover={{ y: -5 }}
                             >
-                                <div className="bg-green-100 text-green-600 p-3 rounded-full inline-flex mb-3">
+                                <div
+                                    className={`bg-green-100 text-green-600 p-3 rounded-full inline-flex mb-3 ${
+                                        completeStatus === "manual_review"
+                                            ? "bg-yellow-100 text-yellow-600"
+                                            : ""
+                                    }`}
+                                >
                                     <IconComponent className="w-6 h-6" />
                                 </div>
                                 <div className="text-2xl font-bold text-gray-900 mb-1">
@@ -333,7 +443,13 @@ const Complete = () => {
                     transition={{ duration: 0.8, delay: 2.8 }}
                 >
                     <div className="flex items-center justify-center space-x-2 mb-2">
-                        <Shield className="w-4 h-4 text-green-500" />
+                        <Shield
+                            className={`w-4 h-4 text-green-500 ${
+                                completeStatus === "manual_review"
+                                    ? "text-yellow-500"
+                                    : ""
+                            }`}
+                        />
                         <span className="text-sm font-medium">
                             Bank-level security
                         </span>

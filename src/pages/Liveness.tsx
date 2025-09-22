@@ -231,7 +231,10 @@ const Liveness = () => {
     const urlParams = buildUrlSessionTokens();
 
     useEffect(() => {
-        if (getStepStatus("document") !== "approved") {
+        if (
+            getStepStatus("document") !== "approved" &&
+            getStepStatus("document") !== "manual_review"
+        ) {
             navigate(`/document/${urlParams}`);
         }
         if (getStepStatus("liveness") === "approved") {

@@ -53,6 +53,8 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
             return "text-blue-600 bg-blue-100 border-blue-200";
         } else if (status === "rejected") {
             return "text-red-600 bg-red-100 border-red-200";
+        } else if (status === "manual_review") {
+            return "text-yellow-600 bg-yellow-100 border-yellow-200";
         } else {
             return "text-gray-400 bg-gray-100 border-gray-200";
         }
@@ -61,6 +63,8 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
     const getStepIcon = (step: Step, status: StepStatus) => {
         if (status === "approved") {
             return <CheckCircle className="w-5 h-5" />;
+        } else if (status === "manual_review") {
+            return <Shield className="w-5 h-5" />;
         } else {
             return <step.icon className="w-5 h-5" />;
         }
@@ -119,6 +123,8 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
                                                 ? "text-blue-600"
                                                 : status === "rejected"
                                                 ? "text-red-600"
+                                                : status === "manual_review"
+                                                ? "text-yellow-600"
                                                 : "text-gray-500"
                                         }
                                     `}
@@ -135,6 +141,8 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
                                                 ? "text-blue-500"
                                                 : status === "rejected"
                                                 ? "text-red-500"
+                                                : status === "manual_review"
+                                                ? "text-yellow-500"
                                                 : "text-gray-400"
                                         }
                                     `}
@@ -145,6 +153,8 @@ const ProgressStepper = ({ currentStep }: ProgressStepperProps) => {
                                             ? "Current"
                                             : status === "rejected"
                                             ? "Rejected"
+                                            : status === "manual_review"
+                                            ? "Manual Review"
                                             : "Pending"}
                                     </p>
                                 </div>

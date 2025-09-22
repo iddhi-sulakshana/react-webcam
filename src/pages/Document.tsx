@@ -62,7 +62,10 @@ const Document = () => {
         if (getStepStatus("selfie") !== "approved") {
             navigate(`/selfie/${urlParams}`);
         }
-        if (getStepStatus("document") === "approved") {
+        if (
+            getStepStatus("document") === "approved" ||
+            getStepStatus("document") === "manual_review"
+        ) {
             navigate(`/liveness/${urlParams}`);
         }
     }, [getStepStatus("selfie"), getStepStatus("document")]);
